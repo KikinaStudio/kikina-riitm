@@ -1,0 +1,11 @@
+# Réglages du projet Kikina @ RIITM. Rien n'est en dur dans le code.
+
+[sortie]
+largeur = 14446      # à confirmer avec le technicien (14446 ou 14573)
+hauteur = 760
+fps = 30
+scale = 1.0          # 0.5 = développer à demi-résolution
+nom_ndi = "KIKINA"
+
+[assets]
+mire = "assets/mire_club_immersif_14446x760.jpg"
