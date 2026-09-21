@@ -59,5 +59,6 @@ Puis ouvrir NDI Video Monitor et choisir la source `KIKINA`.
 ### Prochaine action
 - **Étape 1 validée par Jérémie le 21 septembre 2026.**
 - Étape 2 (la matière) à la prochaine session.
-- Étape 1 bis dès que le PC du show est accessible.
-- Question restée sans réponse : netteté des traits fins de la mire dans NDI Video Monitor (sert à régler la taille du grain).
+- Étape 1 bis : accès au PC du show prévu le 22 septembre 2026. Suivre le README côté Windows, lancer `test_ndi.py --minutes 10`, noter les chiffres ici.
+- Dépôt GitHub privé créé : https://github.com/KikinaStudio/kikina-riitm (Jérémie veut que je pousse moi-même après chaque commit).
+- Netteté des traits fins dans NDI Video Monitor : pas jugeable à l'oeil sur le Mac (image trop fine, pas de zoom), a priori pas baveux. À mesurer à l'étape 2 en comparant une capture du flux reçu à l'image envoyée.

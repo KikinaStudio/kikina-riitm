@@ -31,9 +31,9 @@ On tape une ligne, puis Entrée.
 2. **Git** : https://git-scm.com/download/win (tout laisser par défaut).
 3. **Pilote NVIDIA** à jour : https://www.nvidia.com/Download/index.aspx
 4. **NDI Tools** (gratuit) : https://ndi.video/tools/ puis installer.
-5. Ouvrir PowerShell, récupérer le projet et créer l'environnement :
+5. Ouvrir PowerShell, récupérer le projet et créer l'environnement. Le dépôt est privé : au `git clone`, une fenêtre GitHub s'ouvre, se connecter avec le compte KikinaStudio.
    ```powershell
-   git clone ADRESSE_DU_DEPOT_GITHUB kikina
+   git clone https://github.com/KikinaStudio/kikina-riitm.git kikina
    cd kikina
    py -3.11 -m venv .venv
    .venv\Scripts\pip install -r requirements.txt
