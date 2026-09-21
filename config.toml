@@ -9,3 +9,52 @@ nom_ndi = "KIKINA"
 
 [assets]
 mire = "assets/mire_club_immersif_14446x760.jpg"
+
+# ---------------------------------------------------------------------------
+# La matière (étape 2). Tout ce bloc se recharge à chaud : on enregistre le
+# fichier, l'image change. Seul `particules` demande de relancer le programme.
+[matiere]
+particules = 1200000
+reglage_depart = "moyen"   # calme, moyen ou dense
+transition_s = 6           # durée du passage d'un réglage à l'autre
+vie_s = [8, 25]            # chaque grain vit entre 8 et 25 s puis renaît ailleurs, en fondu
+taille_px = 2.5            # diamètre moyen d'un grain
+grain_px = 2.5             # taille du grain de l'image (jamais sous 2 : NDI l'efface)
+grain_ips = 12             # le grain change 12 fois par seconde
+grain_force = 0.25         # grain dans la matière (0 = lisse)
+plancher = 0.03            # jamais de noir pur : 0.02 à 0.04
+voile_echelle = 0.8        # taille des grandes masses (plus petit = masses plus larges)
+voile_vitesse = 0.02       # lenteur de la respiration des masses
+courant_echelle = 1.5      # taille des tourbillons
+courant_evolution = 0.03   # vitesse à laquelle les tourbillons se déforment
+
+# Les 3 réglages. Touches C, M, D dans la fenêtre d'aperçu.
+[matiere.calme]
+densite = 0.35             # part des grains allumés (0 à 1)
+vitesse = 0.004            # en hauteurs de bandeau par seconde (0.01 = 7,6 px/s)
+chute = 0.002              # la matière se dépose doucement
+exposition = 0.7           # luminosité de la matière
+brume = 0.03               # lueur diffuse dans les masses
+voile_plein = 0.25         # part du mur occupée par la matière (0 = presque vide, 1 = plein)
+voile_contraste = 1.0      # 1 = masses et vides marqués, 0 = uniforme
+voile_filaments = 0.9      # 1 = masses déchirées en filaments, 0 = masses pleines
+
+[matiere.moyen]
+densite = 0.6
+vitesse = 0.012
+chute = 0.0
+exposition = 0.9
+brume = 0.06
+voile_plein = 0.55
+voile_contraste = 0.95
+voile_filaments = 0.6
+
+[matiere.dense]
+densite = 1.0
+vitesse = 0.03
+chute = 0.0
+exposition = 1.1
+brume = 0.10
+voile_plein = 0.85
+voile_contraste = 0.8
+voile_filaments = 0.25

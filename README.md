@@ -1,7 +1,8 @@
 # Kikina @ RIITM - moteur visuel "Sound, alive."
 
 Ce dossier produit un flux vidéo NDI nommé `KIKINA` (le bandeau 360 de la salle).
-Pour l'instant il ne contient que l'étape 1 : le test du tuyau NDI (`test_ndi.py`).
+- `kikina.py` : le moteur visuel (la matière).
+- `test_ndi.py` : le test du tuyau NDI, à relancer sur chaque nouvelle machine.
 
 Le "Terminal" (macOS) ou "PowerShell" (Windows) est la fenêtre où l'on tape des commandes.
 On tape une ligne, puis Entrée.
@@ -70,6 +71,22 @@ Options :
 .venv/bin/python test_ndi.py --minutes 10    # s'arrête seul et affiche un bilan
 .venv/bin/python test_ndi.py --scale 0.5     # teste à demi-résolution
 ```
+
+## Lancer le moteur
+
+macOS :
+```bash
+.venv/bin/python kikina.py
+```
+Windows :
+```powershell
+.venv\Scripts\python kikina.py
+```
+Une fenêtre s'ouvre avec le bandeau découpé en 4 lignes (une par mur). Le titre de la fenêtre donne les images/seconde.
+
+Touches (cliquer d'abord dans la fenêtre) : **C** calme, **M** moyen, **D** dense, **P** capture PNG dans `captures/`, **Échap** quitter.
+
+Le look se règle dans `config.toml` (bloc `[matiere]`) et dans les fichiers de `shaders/`. On enregistre le fichier, l'image change toute seule, sans relancer.
 
 ## Réglages
 

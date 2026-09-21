@@ -4,6 +4,43 @@
 
 ---
 
+## 21 septembre 2026 - Étape 2 : la matière (en cours, look à valider par Jérémie)
+
+### Ce qui a été fait
+- `kikina.py` : le moteur. Fenêtre d'aperçu (4 lignes, une par mur, i/s dans le titre), rendu hors écran à pleine résolution, envoi NDI `KIKINA`.
+- Shaders dans `shaders/`, rechargés à chaud, comme `config.toml` :
+  - `commun.glsl` : hasard sur entiers (identique Mac et PC), bruit périodique en x, courant.
+  - `champs.frag` : calculé à 1/8 de la taille, une fois par image. Le voile (où la matière est présente) et le courant (tourbillons qui longent le haut et le bas sans sortir).
+  - `simulation.frag` : fait avancer 1,2 million de particules stockées dans une texture (ping-pong). Chaque grain vit 8 à 25 s puis renaît en fondu, de préférence dans les masses.
+  - `particules.vert/.frag` : grains ronds à bord doux, beaucoup de fins et ternes, quelques rares gros.
+  - `finition.frag` : exposition, brume, grain de 2,5 px, plancher de gris 3 %.
+  - `apercu.frag` : découpe en 4 murs pour la fenêtre.
+- 3 réglages dans `config.toml` (`[matiere.calme]`, `moyen`, `dense`), touches C, M, D, transition lissée sur 6 s. Touche P : capture PNG pleine résolution dans `captures/`.
+- Étape 1 : le test d'hier a été arrêté. NDI Tools installé sur le Mac.
+
+### Ce qui marche
+- Continuité en x vérifiée : raccord invisible sur capture, et écart mesuré au raccord (2,98) inférieur à l'écart moyen ailleurs (4,58).
+- Plancher : minimum mesuré 1,6 %, médiane 3,5 % en calme. Jamais de noir pur.
+- Noir et blanc strict (sortie en niveaux de gris).
+
+### Ce qui reste fragile
+- **Performance non mesurée proprement** : le Mac était en mode économie d'énergie (batterie presque vide), ce qui bride tout. Avant ce mode : calme 6 ms, moyen 15 ms, dense 28 ms de rendu avec 2 M de particules. Depuis : passage à 1,2 M de particules + champs en basse résolution, à re-mesurer SUR SECTEUR. Le coût vient surtout du nombre de grains dessinés (environ 11 ms par million sur le M2).
+- Look jugé sur captures PNG, pas encore dans NDI Video Monitor ni en mouvement par Jérémie.
+- `particules` ne se recharge pas à chaud (il faut relancer).
+
+### Comment relancer
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/python kikina.py
+```
+Touches dans la fenêtre : C calme, M moyen, D dense, P capture, Échap quitter.
+
+### Prochaine action
+- Jérémie : brancher le secteur, lancer, regarder les 3 réglages, dire ce qui plaît ou non.
+- Étape 1 bis sur le PC le 22 septembre (lancer aussi `kikina.py` pour avoir ses chiffres).
+
+---
+
 ## 20 septembre 2026 - Étape 1 : test du tuyau NDI (MacBook)
 
 ### Ce qui a été fait
