@@ -57,5 +57,7 @@ cd "/Users/leon/RIITM final"
 Puis ouvrir NDI Video Monitor et choisir la source `KIKINA`.
 
 ### Prochaine action
-- Jérémie : valider l'étape 1 (flux vu dans NDI Video Monitor le 20/09, sans saccade).
-- Puis étape 1 bis dès que le PC du show est accessible.
+- **Étape 1 validée par Jérémie le 21 septembre 2026.**
+- Étape 2 (la matière) à la prochaine session.
+- Étape 1 bis dès que le PC du show est accessible.
+- Question restée sans réponse : netteté des traits fins de la mire dans NDI Video Monitor (sert à régler la taille du grain).
