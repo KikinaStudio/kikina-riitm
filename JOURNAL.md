@@ -24,7 +24,7 @@
 - Noir et blanc strict (sortie en niveaux de gris).
 
 ### Ce qui reste fragile
-- **Performance non mesurée proprement** : le Mac était en mode économie d'énergie (batterie presque vide), ce qui bride tout. Avant ce mode : calme 6 ms, moyen 15 ms, dense 28 ms de rendu avec 2 M de particules. Depuis : passage à 1,2 M de particules + champs en basse résolution, à re-mesurer SUR SECTEUR. Le coût vient surtout du nombre de grains dessinés (environ 11 ms par million sur le M2).
+- Performance mesurée le 22/09 par Jérémie, Mac sur secteur, NDI Video Monitor connecté, 5 min en dense : 30,0 i/s stables (jamais sous 28,8), rendu 18 à 19 ms, relecture + envoi 3 ms. Calme et moyen : 14 à 19 ms. Un tiers de marge, ça tient.
 - Look jugé sur captures PNG, pas encore dans NDI Video Monitor ni en mouvement par Jérémie.
 - `particules` ne se recharge pas à chaud (il faut relancer).
 
