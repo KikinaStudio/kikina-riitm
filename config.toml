@@ -15,7 +15,7 @@ mire = "assets/mire_club_immersif_14446x760.jpg"
 # fichier, l'image change. Seul `particules` demande de relancer le programme.
 [matiere]
 particules = 1200000
-reglage_depart = "moyen"   # calme, moyen ou dense
+reglage_depart = "musique" # musique (la marée suit le son), calme, moyen ou dense
 transition_s = 6           # durée du passage d'un réglage à l'autre
 vie_s = [8, 25]            # chaque grain vit entre 8 et 25 s puis renaît ailleurs, en fondu
 taille_px = 2.5            # diamètre moyen d'un grain
@@ -69,3 +69,34 @@ brume = 0.10
 voile_plein = 0.85
 voile_contraste = 0.7
 voile_filaments = 0.25
+
+# ---------------------------------------------------------------------------
+# Les entrées (étape 3). Changer ce bloc demande de relancer le programme.
+[entrees]
+simulateur = true          # true : le son vient de son_test ; false : de l'entrée audio ci-dessous
+son_test = "assets/test.wav"
+audio_entree = ""          # une partie du nom de l'entrée audio en mode réel (vide = entrée par défaut)
+osc_port = 7000            # à confirmer avec Arthur
+
+# La musique. Se recharge à chaud. Durées = temps pour faire 95 % du chemin.
+[musique]
+volume_calme_db = -28      # volume mesuré qui vaut "calme" (lire la console)
+volume_dense_db = -14      # volume mesuré qui vaut "dense"
+maree_s = 2                # lissage de la marée (calme <-> dense)
+accents_s = 0.5            # lissage des graves et des aigus
+graves_force = 0.15        # combien les graves font gonfler les masses (0 = coupé)
+aigus_force = 0.4          # combien les aigus font scintiller les grains fins (0 = coupé)
+notes_saut_db = 4          # une note doit dépasser de 4 dB ce qu'on entendait juste avant (plus haut = moins de notes)
+onde_vitesse = 0.35        # vitesse de l'anneau, en hauteurs de bandeau par seconde
+onde_duree_s = 3           # vie d'une onde
+onde_largeur = 0.05        # épaisseur du front, en hauteurs de bandeau
+onde_poussee = 0.25        # force avec laquelle le front pousse la matière (0 = coupé)
+onde_eclat = 0.6           # lumière en plus sur le front (0 = coupé)
+octaves = [2.5, 5.5]       # octave qui va en bas du mur, octave qui va en haut (4 = do à 262 Hz)
+
+# Les zones : plage de x de chaque zone, en px sur la largeur de référence 14446.
+# Par défaut zone N = mur N, en attendant l'implantation réelle dans la salle.
+[zones]
+plages = [[0, 5186], [5186, 7321], [7321, 12311], [12311, 14446]]
+presence_force = 0.25      # agitation d'une présence immobile (le mouvement va jusqu'à 1)
+presence_s = 1             # lissage de la présence
