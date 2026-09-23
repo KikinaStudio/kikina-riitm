@@ -4,6 +4,8 @@
 
 uniform sampler2D etat;
 uniform sampler2D champs;
+uniform sampler2D excitation;
+uniform float eveil;
 uniform float nombre;          // nombre total de particules
 uniform float densite;         // 0 à 1 : part des particules allumées
 uniform float taille;          // diamètre moyen en px (à scale 1)
@@ -23,7 +25,10 @@ void main() {
     float age = e.z / e.w;
     float fondu = smoothstep(0.0, 0.2, age) * (1.0 - smoothstep(0.75, 1.0, age));
 
-    float masse = mix(1.0, texture(champs, vec2(e.x / aspect, e.y)).r, voile_contraste);
+    vec2 u = vec2(e.x / aspect, e.y);
+    float masse = mix(1.0, texture(champs, u).r, voile_contraste);
+    float a = clamp(eveil + texture(excitation, u).r, 0.0, 1.0);
+    masse *= 0.75 + 0.5 * a;                                // la matière s'éclaire en s'agitant
 
     // Beaucoup de grains fins et ternes, quelques rares gros et brillants.
     float h = hasard(id * 13U + 1U);

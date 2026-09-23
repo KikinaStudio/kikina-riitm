@@ -2,6 +2,7 @@
 // Les champs, calculés en petite taille une fois par image puis lus par tout le reste :
 //   rouge = le voile : où la matière est présente (1) et où elle laisse du vide (0)
 //   vert, bleu = le courant qui emporte les grains
+// Deuxième texture : le remous, un courant fin et vif, utilisé là où ça s'agite.
 #include "commun.glsl"
 
 uniform float voile_echelle;    // taille des grandes masses
@@ -9,7 +10,8 @@ uniform float voile_vitesse;    // lenteur de leur respiration
 uniform float voile_plein;      // 0 = presque tout est vide, 1 = presque tout est rempli
 uniform float voile_filaments;  // 0 = masses pleines, 1 = masses déchirées en filaments
 in vec2 uv;
-out vec4 sortie;
+layout(location = 0) out vec4 sortie;
+layout(location = 1) out vec2 remous;
 
 void main() {
     vec2 u = vec2(uv.x * aspect, uv.y);
@@ -23,4 +25,5 @@ void main() {
     f = 1.0 - abs(2.0 * f - 1.0);                         // crêtes : des veines plutôt que des taches
     f = smoothstep(0.6, 0.95, f);
     sortie = vec4(masses * mix(1.0, f, voile_filaments), c, 1.0);
+    remous = courant_fin(u);
 }

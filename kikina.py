@@ -4,6 +4,7 @@
     python kikina.py --secondes 20    # s'arrête seul et enregistre une capture (pour les tests)
 
 Touches dans la fenêtre : C calme, M moyen, D dense, P capture PNG, Échap quitter.
+Bouger la souris dans l'aperçu simule un visiteur qui bouge à cet endroit du mur.
 Les fichiers de shaders/ et config.toml sont rechargés dès qu'on les enregistre.
 """
 import math
@@ -64,6 +65,7 @@ class Kikina(mglw.WindowConfig):
     def add_arguments(cls, parser):
         parser.add_argument("--secondes", type=float, default=0, help="s'arrête seul après N secondes")
         parser.add_argument("--reglage", choices=REGLAGES, help="réglage de départ (sinon celui de config.toml)")
+        parser.add_argument("--agiter", action="store_true", help="simule un visiteur qui tourne en rond sur le mur 1")
 
     def __init__(self, **kw):
         super().__init__(**kw)
@@ -98,9 +100,18 @@ class Kikina(mglw.WindowConfig):
 
         self.matiere = ctx.texture((self.w, self.h), 1, dtype="f2")
         self.matiere_fbo = ctx.framebuffer([self.matiere])
-        self.champs = ctx.texture((self.w // 8, self.h // 8), 4, dtype="f2")  # champs doux : 1/8 suffit
-        self.champs.repeat_x, self.champs.repeat_y = True, False
-        self.champs_fbo = ctx.framebuffer([self.champs])
+        petit = (self.w // 8, self.h // 8)  # champs doux : 1/8 de la taille suffit
+        self.champs = ctx.texture(petit, 4, dtype="f2")
+        self.remous = ctx.texture(petit, 2, dtype="f2")
+        for t in (self.champs, self.remous):
+            t.repeat_x, t.repeat_y = True, False
+        self.champs_fbo = ctx.framebuffer([self.champs, self.remous])
+        # Excitation : l'agitation locale, entretenue côté Python (souris, puis webcams à l'étape 3).
+        self.excitation = np.zeros((petit[1], petit[0]), dtype="f4")
+        self.excitation_tex = ctx.texture(petit, 1, dtype="f4")
+        self.excitation_tex.repeat_x, self.excitation_tex.repeat_y = True, False
+        self.souris = None  # (x, y) en fraction du bandeau, et énergie du mouvement depuis la dernière image
+        self.souris_energie = 0.0
         self.image = ctx.texture((self.w, self.h), 4)
         self.image_fbo = ctx.framebuffer([self.image])
         self.pixels = np.empty(self.w * self.h * 4, dtype=np.uint8)
@@ -125,7 +136,7 @@ class Kikina(mglw.WindowConfig):
         self.sender.open()
 
         print(f"{self.nombre} particules, sortie {self.w} x {self.h} px, NDI '{sortie['nom_ndi']}'")
-        print("Touches : C calme, M moyen, D dense, P capture, Échap quitter.\n")
+        print("Touches : C calme, M moyen, D dense, P capture, Échap quitter. La souris agite la matière.\n")
         self.moi = psutil.Process()
         self.moi.cpu_percent()
         self.debut = self.prochaine = self.t_stats = self.t_verif = time.perf_counter()
@@ -175,12 +186,17 @@ class Kikina(mglw.WindowConfig):
                voile_filaments=p["voile_filaments"], voile_plein=p["voile_plein"], **commun)
         self.vaos["champs"].render(moderngl.TRIANGLE_STRIP)
 
+        self.agiter(m, dt)
         (lue, _), (_, ecrite_fbo) = self.etats
         ecrite_fbo.use()
         lue.use(0)
         self.champs.use(1)
-        regler(self.progs["simulation"], etat=0, champs=1, dt=dt, image=self.n, vitesse=p["vitesse"],
-               chute=p["chute"], vie=tuple(m["vie_s"]), **commun)
+        self.remous.use(2)
+        self.excitation_tex.use(3)
+        regler(self.progs["simulation"], etat=0, champs=1, remous=2, excitation=3, dt=dt, image=self.n,
+               eveil=p["eveil"], vie=tuple(m["vie_s"]),
+               **{k: m[k] for k in ("repos_hauteur", "repos_force", "repos_etalement", "turbulence_repos", "turbulence_eveil",
+                                    "remous_force", "soulevement")}, **commun)
         self.vaos["simulation"].render(moderngl.TRIANGLE_STRIP)
         self.etats.reverse()
 
@@ -190,9 +206,11 @@ class Kikina(mglw.WindowConfig):
         self.ctx.blend_func = moderngl.ONE, moderngl.ONE  # les grains s'additionnent
         self.etats[0][0].use(0)
         self.champs.use(1)
-        regler(self.progs["particules"], etat=0, champs=1, nombre=float(self.nombre), densite=p["densite"],
-               taille=m["taille_px"], voile_contraste=p["voile_contraste"], **commun)
-        allumees = min(self.nombre, int(self.nombre * (p["densite"] + 0.05)) + 1)
+        self.excitation_tex.use(3)
+        regler(self.progs["particules"], etat=0, champs=1, excitation=3, nombre=float(self.nombre),
+               densite=m["densite"], eveil=p["eveil"], taille=m["taille_px"],
+               voile_contraste=p["voile_contraste"], **commun)
+        allumees = min(self.nombre, int(self.nombre * (m["densite"] + 0.05)) + 1)
         self.vaos["particules"].render(moderngl.POINTS, vertices=allumees)
         self.ctx.disable(moderngl.BLEND)
 
@@ -210,6 +228,41 @@ class Kikina(mglw.WindowConfig):
         self.sender.write_video_async(self.pixels)
         t3 = time.perf_counter()
         self.mesures.append(((t1 - t0) * 1e3, (t2 - t1) * 1e3, (t3 - t2) * 1e3))
+
+    # --- agitation locale ---------------------------------------------------
+    def agiter(self, m, dt):
+        """Fait retomber l'excitation, y ajoute le mouvement de la souris, l'envoie au GPU."""
+        ex = self.excitation
+        ex *= math.exp(-dt / m["agitation_retombee_s"])
+        if self.argv.agiter:  # visiteur simulé : tourne en rond au milieu du mur 1
+            ang = self.temps * 1.5
+            self.souris = (MURS[0][1] / LARGEUR_REF * (0.5 + 0.15 * math.cos(ang)), 0.5 + 0.3 * math.sin(ang))
+            self.souris_energie = 1.0
+        if self.souris and self.souris_energie > 0:
+            h, w = ex.shape
+            r = m["agitation_rayon_px"] * self.scale / 8
+            cx, cy = self.souris[0] * w, self.souris[1] * h
+            n = int(r) + 1
+            ys = np.clip(np.arange(int(cy) - n, int(cy) + n + 1), 0, h - 1)
+            xs = np.arange(int(cx) - n, int(cx) + n + 1) % w  # le bandeau boucle en x
+            d2 = ((np.arange(int(cy) - n, int(cy) + n + 1) - cy)[:, None] ** 2 + (np.arange(int(cx) - n, int(cx) + n + 1) - cx)[None, :] ** 2) / r ** 2
+            tache = np.exp(-d2 * 3) * min(self.souris_energie, 1.0) * (dt / m["agitation_montee_s"])
+            ex[np.ix_(ys, xs)] = np.minimum(1.0, ex[np.ix_(ys, xs)] + tache)
+            self.souris_energie = 0.0
+        self.excitation_tex.write(ex.tobytes())
+
+    def on_mouse_position_event(self, x, y, dx, dy):
+        """La souris dans l'aperçu = un visiteur qui bouge sur le mur correspondant."""
+        W, H = self.wnd.size
+        ligne = min(3, int(y / H * 4))
+        t = (y / H * 4 - ligne - 0.015) / 0.97
+        plus_long = max(b - a for a, b in MURS) / LARGEUR_REF
+        fx = MURS[ligne][0] / LARGEUR_REF + x / W * plus_long
+        if fx > MURS[ligne][1] / LARGEUR_REF or not 0 <= t <= 1:
+            self.souris = None
+            return
+        self.souris = (fx, t)
+        self.souris_energie += math.hypot(dx, dy) / 40  # 40 px de souris par image = agitation pleine
 
     def on_render(self, t, frame_time):
         maintenant = time.perf_counter()

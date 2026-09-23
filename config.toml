@@ -27,34 +27,45 @@ voile_echelle = 0.8        # taille des grandes masses (plus petit = masses plus
 voile_vitesse = 0.02       # lenteur de la respiration des masses
 courant_echelle = 1.5      # taille des tourbillons
 courant_evolution = 0.03   # vitesse à laquelle les tourbillons se déforment
+densite = 0.7              # part des grains allumés (0 à 1), la même à tous les niveaux
 
-# Les 3 réglages. Touches C, M, D dans la fenêtre d'aperçu.
+# Le repos et l'agitation. Vitesses en hauteurs de bandeau par seconde (0.01 = 7,6 px/s).
+repos_hauteur = 0.78       # où la matière se dépose au calme (0 = haut du mur, 1 = bas)
+repos_force = 0.08         # force de l'attraction vers cette hauteur
+repos_etalement = 0.35     # épaisseur de la nappe au repos (1 = tout le mur)
+turbulence_repos = 0.006   # vitesse des tourbillons au calme
+turbulence_eveil = 0.05    # vitesse des tourbillons à l'éveil maximal
+remous_force = 0.08        # remous fins et vifs à l'agitation maximale
+soulevement = 0.05         # vitesse de montée de la matière là où quelqu'un bouge
+
+# L'agitation locale (à l'étape 3 : les webcams ; pour l'instant : la souris dans l'aperçu).
+agitation_rayon_px = 700   # rayon de l'agitation autour d'un visiteur
+agitation_montee_s = 0.6   # temps pour que l'agitation s'installe
+agitation_retombee_s = 2.5 # temps pour qu'elle retombe
+
+
+
+# Les 3 niveaux d'éveil global (ce que fera la musique). Touches C, M, D dans l'aperçu.
 [matiere.calme]
-densite = 0.35             # part des grains allumés (0 à 1)
-vitesse = 0.004            # en hauteurs de bandeau par seconde (0.01 = 7,6 px/s)
-chute = 0.002              # la matière se dépose doucement
-exposition = 0.7           # luminosité de la matière
+eveil = 0.0                # 0 = la matière se dépose, 1 = elle est partout et s'agite
+exposition = 0.8           # luminosité de la matière
 brume = 0.03               # lueur diffuse dans les masses
-voile_plein = 0.25         # part du mur occupée par la matière (0 = presque vide, 1 = plein)
-voile_contraste = 1.0      # 1 = masses et vides marqués, 0 = uniforme
-voile_filaments = 0.9      # 1 = masses déchirées en filaments, 0 = masses pleines
+voile_plein = 0.5          # part du mur occupée par les masses (0 = presque vide, 1 = plein)
+voile_contraste = 0.9      # 1 = masses et vides marqués, 0 = uniforme
+voile_filaments = 0.8      # 1 = masses déchirées en filaments, 0 = masses pleines
 
 [matiere.moyen]
-densite = 0.6
-vitesse = 0.012
-chute = 0.0
+eveil = 0.5
 exposition = 0.9
 brume = 0.06
-voile_plein = 0.55
-voile_contraste = 0.95
-voile_filaments = 0.6
+voile_plein = 0.65
+voile_contraste = 0.85
+voile_filaments = 0.5
 
 [matiere.dense]
-densite = 1.0
-vitesse = 0.03
-chute = 0.0
-exposition = 1.1
+eveil = 1.0
+exposition = 1.0
 brume = 0.10
 voile_plein = 0.85
-voile_contraste = 0.8
+voile_contraste = 0.7
 voile_filaments = 0.25

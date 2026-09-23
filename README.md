@@ -84,7 +84,9 @@ Windows :
 ```
 Une fenêtre s'ouvre avec le bandeau découpé en 4 lignes (une par mur). Le titre de la fenêtre donne les images/seconde.
 
-Touches (cliquer d'abord dans la fenêtre) : **C** calme, **M** moyen, **D** dense, **P** capture PNG dans `captures/`, **Échap** quitter.
+Touches (cliquer d'abord dans la fenêtre) : **C** calme, **M** moyen, **D** dense (niveau d'éveil global, ce que fera la musique), **P** capture PNG dans `captures/`, **Échap** quitter.
+
+**Bouger la souris** sur une des 4 lignes simule un visiteur qui bouge à cet endroit du mur : la matière s'y soulève. `--agiter` lance un visiteur simulé sur le mur 1.
 
 Le look se règle dans `config.toml` (bloc `[matiere]`) et dans les fichiers de `shaders/`. On enregistre le fichier, l'image change toute seule, sans relancer.
 

@@ -62,3 +62,15 @@ vec2 courant(vec2 u) {
     float dx = potentiel(u + vec2(e, 0.0), t) - potentiel(u - vec2(e, 0.0), t);
     return vec2(dy, -dx) / (2.0 * e * courant_echelle);
 }
+
+// Remous : même principe, 4 fois plus petit et 6 fois plus vif. Sert à l'agitation.
+vec2 courant_fin(vec2 u) {
+    float e = 0.004, k = courant_echelle * 4.0;
+    float t = temps * courant_evolution * 6.0 + 300.0;
+    float b0 = smoothstep(0.0, 0.1, u.y) * (1.0 - smoothstep(0.9, 1.0, u.y));
+    #define P(q) ((nuage(q, t, k, 2) - 0.5) * b0)
+    float dy = P(u + vec2(0.0, e)) - P(u - vec2(0.0, e));
+    float dx = P(u + vec2(e, 0.0)) - P(u - vec2(e, 0.0));
+    #undef P
+    return vec2(dy, -dx) / (2.0 * e * k);
+}

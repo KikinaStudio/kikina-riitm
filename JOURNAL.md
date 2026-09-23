@@ -4,6 +4,36 @@
 
 ---
 
+## 23 septembre 2026 - Étape 2, deuxième version : repos et agitation
+
+Retour de Jérémie sur la première version : "cheap", une variation de quantité de grains ne se lit pas comme une réaction. Il veut un changement de comportement, plus visible.
+
+### Ce qui a été fait
+- La matière a maintenant deux états qui se disputent chaque grain (`shaders/simulation.frag`) :
+  - **le repos** : attraction douce vers une nappe basse (`repos_hauteur` 0.78, épaisseur `repos_etalement` 0.35), tourbillons lents ;
+  - **l'agitation** : tourbillons vifs, remous fins (2e sortie de `champs.frag`), soulèvement. Elle vient de l'**éveil global** (0 à 1, ce que fera la musique : calme 0, moyen 0.5, dense 1) plus d'une **excitation locale** (ce que feront les webcams).
+- L'excitation locale est une petite image (1/8 de la taille) entretenue côté Python (`kikina.agiter`), avec montée 0.6 s et retombée 2.5 s. Pour l'instant elle est nourrie par la **souris dans l'aperçu** : bouger la souris sur une ligne = un visiteur qui bouge sur ce mur. À l'étape 3, les zones y écriront de la même façon.
+- `--agiter` : visiteur simulé qui tourne en rond sur le mur 1 (pour les tests sans souris).
+- Les grains s'éclairent un peu (+50 %) là où ça s'agite. Le nombre de grains ne change plus entre les niveaux (`densite` 0.7 partout).
+- Les bords haut et bas freinent la matière (sinon elle s'y entasse en un trait clair).
+
+### Ce qui marche
+- 30 i/s, rendu 10 à 13 ms sur le Mac (moins qu'avant : les grains éteints ne sont plus dessinés).
+- Captures : calme = nappe basse ; calme + souris = colonne soulevée à l'endroit du mouvement ; dense = tout le mur.
+
+### Ce qui reste fragile
+- Jugé sur captures et par moi. Jérémie doit tester avec la souris, en mouvement.
+- Réglage des vitesses à affiner sur les vrais murs (une vitesse en px/s se juge à l'échelle 1 px = 3 mm).
+
+### Comment relancer
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/python kikina.py
+```
+Puis bouger la souris sur une des 4 lignes de l'aperçu.
+
+---
+
 ## 21 septembre 2026 - Étape 2 : la matière (en cours, look à valider par Jérémie)
 
 ### Ce qui a été fait
