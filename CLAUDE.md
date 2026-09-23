@@ -11,6 +11,14 @@ Jérémie, directeur créatif de Kikina. Il n'est pas développeur. Il dirige l'
 - Tiens `JOURNAL.md` à jour (date, ce qui a été fait, ce qui marche, ce qui reste fragile, comment relancer) et relis-le au début de chaque session.
 - Le dossier est sous git : un commit à chaque étape validée.
 
+## Sources à relire (Notion de Kikina)
+Avant tout travail sur le contenu ou le déroulé (cards, ateliers, textes, états), relire :
+- Page principale « RIITM - Expérience immersive Kikina @ Festival CNN » : https://app.notion.com/p/3d4399edaca3815981f6de2d62e9e468 (les zones / ateliers, capteurs, briefs, salle, speechs).
+- « Storytelling de l'expérience » : https://app.notion.com/p/3db399edaca3809197b1ff706d4affe3 (technologie invisible, 3 actes The Room / The Crowd / The Pulse, faits à la fin).
+- « RIITM 2026 - Éléments Kikina » : https://app.notion.com/p/3c6399edaca381f7a9a9c92a6148c597 (titre « Le son qui écoute », description officielle).
+
+Les ateliers sont ceux du Notion (Accueil - 3 premiers pas, Densité - couches, Mouvement - activité, Proximité - nudge, Cœur - bagues), jamais des secteurs (commerce, hôtellerie...) : ceux-là sont les cas d'usage. En cas d'écart entre ce fichier et le Notion, le signaler à Jérémie.
+
 ## 2. Le projet en bref
 - Groupes d'environ 10 personnes, 15 minutes, dans une salle de 15 x 6,6 m dont les 4 murs sont projetés par 11 projecteurs (gérés par la salle).
 - 4 zones interactives = 4 ateliers, un par mur (décidé le 23/09). Dans chacune, une webcam mesure le mouvement des visiteurs. Plus ça bouge, plus la musique se densifie.
