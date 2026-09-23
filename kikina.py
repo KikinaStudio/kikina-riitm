@@ -226,7 +226,8 @@ class Kikina(mglw.WindowConfig):
         commun = dict(
             aspect=self.aspect, temps=self.temps, echelle=self.scale,
             courant_echelle=m["courant_echelle"], courant_evolution=m["courant_evolution"],
-            ondes=self.ondes_suivantes(mus, dt), onde_vitesse=mus["onde_vitesse"],
+            ondes=self.ondes_suivantes(mus, dt),
+            onde_vitesse=mus["onde_rayon_px"] / self.cfg["sortie"]["hauteur"] / (1.5 * mus["onde_duree_s"]),
             onde_duree=mus["onde_duree_s"], onde_largeur=mus["onde_largeur"],
         )
 

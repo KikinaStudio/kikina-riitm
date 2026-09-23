@@ -88,7 +88,7 @@ graves_force = 0.15        # combien les graves font gonfler les masses (0 = cou
 brillance_force = 0.4      # combien un son clair fait scintiller les grains fins (0 = coupé)
 brillance_hz = [120, 300]  # brillance (lire la console) qui vaut "sombre", et "clair". Kikinator : 100 à 250 Hz
 notes_saut_db = 4          # une note doit dépasser de 4 dB ce qu'on entendait juste avant (plus haut = moins de notes)
-onde_vitesse = 0.35        # vitesse de l'anneau, en hauteurs de bandeau par seconde
+onde_rayon_px = 450        # rayon final de l'anneau d'une note forte (une note faible : environ la moitié)
 onde_duree_s = 3           # vie d'une onde
 onde_largeur = 0.07        # épaisseur du front, en hauteurs de bandeau
 onde_poussee = 0.4         # force avec laquelle le front pousse la matière (0 = coupé)
