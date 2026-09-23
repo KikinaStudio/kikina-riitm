@@ -5,6 +5,7 @@
 
 Chaque mur a son dossier assets/cards/murN/ : titre.png (le nom de l'atelier, toujours affiché) et
 ses cards (les autres PNG, montrées par ordre alphabétique tant qu'un groupe est dans la zone).
+Une card est une colonne sombre qui coupe le mur sur presque toute sa hauteur, son texte en haut.
 Déposer un PNG dans un dossier suffit : les dossiers sont relus toutes les 2 s.
 Positions en pixels du bandeau à scale 1 : x de 0 à la largeur, y de 0 (haut) à la hauteur.
 """
@@ -18,7 +19,6 @@ ICI = Path(__file__).parent
 LARGEUR_REF = 14446  # largeur pour laquelle les positions des murs et des portes sont données
 MURS = ((0, 5186), (5186, 7321), (7321, 12311), (12311, 14446))
 PORTES = ((1966, 2190, 475, 760), (11562, 12114, 64, 760), (13525, 14214, 76, 760))  # x0, x1, y0, y1
-ECART_TITRE = 30  # px entre le titre de l'atelier et une card posée dessous
 
 
 def encre(chemin):
@@ -62,24 +62,29 @@ class Cartes:
         c = self.cfg["cartes"]
         return (m.x0 + c["marge_px"], c["haut_px"], m.x0 + c["marge_px"] + w, c["haut_px"] + h)
 
-    def places_card(self, m, w, h):
-        """Toutes les positions possibles d'une card w x h sur le mur m : dans le mur, dans la moitié haute,
-        loin des portes et du titre. La rangée du haut d'abord ; sinon, sous le titre."""
+    def places_colonne(self, m, largeur):
+        """Toutes les positions possibles d'une colonne de cette largeur sur le mur m : dans le mur,
+        de haut en bas (moins l'écart), loin des portes et du titre de l'atelier."""
         c = self.cfg["cartes"]
         g = c["marge_px"]
         obstacles = [(a - g, y0 - g, b + g, y1 + g) for a, y0, b, y1 in self.portes]
-        rangees = [c["haut_px"]]
         if m.titre:
-            obstacles.append((m.titre[0] - g, m.titre[1] - g, m.titre[2] + g, m.titre[3] + ECART_TITRE))
-            rangees.append(m.titre[3] + ECART_TITRE)
-        for y in rangees:
-            if y + h > self.H / 2:
-                continue
-            places = [(x, y, x + w, y + h) for x in np.arange(m.x0 + g, m.x1 - g - w + 1, 20)]
-            places = [r for r in places if not any(se_touchent(r, o) for o in obstacles)]
-            if places:
-                return places
-        return []
+            obstacles.append((m.titre[0] - g, m.titre[1] - g, m.titre[2] + g, m.titre[3] + g))
+        y0, y1 = c["ecart_px"], self.H - c["ecart_px"]
+        places = [(x, y0, x + largeur, y1) for x in np.arange(m.x0 + g, m.x1 - g - largeur + 1, 20)]
+        return [r for r in places if not any(se_touchent(r, o) for o in obstacles)]
+
+    def colonne(self, lum):
+        """Le texte d'une card posé en haut de sa colonne : (image de la colonne, largeur) ou None s'il est trop haut."""
+        c = self.cfg["cartes"]
+        i = c["interieur_px"]
+        h, w = lum.shape
+        haut = round(self.H - 2 * c["ecart_px"])
+        if h + 2 * i > haut:
+            return None
+        col = np.zeros((haut, w + 2 * i), dtype="f4")
+        col[i:i + h, i:i + w] = lum
+        return col
 
     # --- fichiers -----------------------------------------------------------------
     def fichiers(self, m):
@@ -123,13 +128,14 @@ class Cartes:
                 print(f"mur {m.n} : {chemin.name} illisible ({err})")
                 continue
             h, w = lum.shape
-            places = self.places_card(m, w, h)
+            col = self.colonne(lum)
+            places = self.places_colonne(m, col.shape[1]) if col is not None else []
             if not places:
                 print(f"mur {m.n} : {chemin.name} ({w} x {h} px) ne tient pas sur ce mur, ignorée")
                 continue
-            loin = [r for r in places if m.card is None or abs(r[0] - m.card[0]) > w / 2]
+            loin = [r for r in places if m.card is None or abs(r[0] - m.card[0]) > col.shape[1]]
             m.card = tuple(float(v) for v in (loin or places)[self.rng.integers(len(loin or places))])
-            self.ecrire(m.card, lum)
+            self.ecrire(m.card, col)
             print(f"mur {m.n} : card {chemin.name}")
             return True
         return False
@@ -191,18 +197,20 @@ if __name__ == "__main__":  # autotest
         rects = [(m.titre, encre(m.dossier / "titre.png"))]
         for chemin in ca.fichiers(m):
             lum = encre(chemin)
-            places = ca.places_card(m, lum.shape[1], lum.shape[0])
+            col = ca.colonne(lum)
+            assert col is not None, f"mur {m.n} : {chemin.name} trop haut pour une colonne"
+            places = ca.places_colonne(m, col.shape[1])
             assert places, f"mur {m.n} : {chemin.name} ne tient nulle part"
-            rects.append((places[len(places) // 2], lum))
+            rects.append((places[len(places) // 2], col))
             for r in places:  # toutes les positions possibles respectent les règles
                 assert m.x0 <= r[0] and r[2] <= m.x1, f"{chemin.name} déborde du mur {m.n}"
-                assert r[3] <= ca.H / 2, f"{chemin.name} descend sous la moitié haute"
+                assert r[1] >= cfg["cartes"]["ecart_px"] and r[3] <= ca.H - cfg["cartes"]["ecart_px"], f"{chemin.name} touche le haut ou le bas"
                 assert not any(se_touchent(r, (a, y0, b, y1)) for a, y0, b, y1 in ca.portes), f"{chemin.name} touche une porte"
                 assert not se_touchent(r, m.titre), f"{chemin.name} touche le titre"
             print(f"mur {m.n} : {chemin.name} {lum.shape[1]} x {lum.shape[0]} px, {len(places)} positions possibles")
         for r, lum in rects[:2]:  # le plan montre le titre et la première card
+            plan.paste(Image.new("L", (round(r[2] - r[0]), round(r[3] - r[1])), 10), (round(r[0]), round(r[1])))
             plan.paste(Image.fromarray((lum * 255).astype("u1")), (round(r[0]), round(r[1])), Image.fromarray((lum * 255).astype("u1")))
-            d.rectangle([round(v) for v in r], outline=140)
     for a, y0, b, y1 in ca.portes:
         d.rectangle((round(a), y0, round(b), y1), fill=90)
     (ICI / "captures").mkdir(exist_ok=True)

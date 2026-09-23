@@ -1,4 +1,5 @@
-"""Fabrique les PNG provisoires des titres d'ateliers et des cards, à partir de assets/cards/cards.json.
+"""Fabrique les PNG provisoires des titres d'ateliers et des cards (texte des colonnes verticales),
+à partir de assets/cards/cards.json.
 
     .venv/bin/python outils/fabriquer_cards.py
 
@@ -16,9 +17,10 @@ CARDS = ICI / "assets/cards"
 POLICE = "/System/Library/Fonts/Avenir Next.ttc"
 DEMI, MOYEN, NORMAL = 2, 5, 7   # graisses dans le fichier de police
 ATELIER_PX = 48                 # titre de l'atelier : petit et discret, en capitales espacées
-TITRE_PX, TEXTE_PX = 80, 34     # card : titre 80 à 120 px, texte 32 px minimum
-LARGEUR_MIN, LARGEUR_MAX = 700, 900
-MOTS_MAX = 25
+TITRE_PX, TEXTE_PX = 80, 32     # card : titre 80 à 120 px, texte 32 px minimum
+LARGEUR = 560                   # largeur du texte ; la colonne ajoute sa marge intérieure autour
+HAUTEUR_MAX = 600               # hauteur de la colonne (760 - 2 x 40) moins sa marge intérieure (2 x 40)
+MOTS_MAX = 50
 
 
 def police(taille, graisse):
@@ -56,14 +58,15 @@ def atelier(nom):
 
 
 def card(titre, texte):
+    """Titre sur une ou deux lignes, puis le texte, sur LARGEUR px."""
     ft, fc = police(TITRE_PX, DEMI), police(TEXTE_PX, NORMAL)
-    lignes = couper(texte, fc, LARGEUR_MAX)
-    pas = round(TEXTE_PX * 1.4)
-    debut = round(TITRE_PX * 1.25)
-    w = max(LARGEUR_MIN, round(ft.getlength(titre)), *(round(fc.getlength(l)) for l in lignes)) + 8
-    im = Image.new("LA", (w, debut + pas * len(lignes) + TEXTE_PX), (255, 0))
+    titres, lignes = couper(titre, ft, LARGEUR), couper(texte, fc, LARGEUR)
+    pas_titre, pas = round(TITRE_PX * 1.1), round(TEXTE_PX * 1.45)
+    debut = pas_titre * len(titres) + round(TITRE_PX * 0.45)
+    im = Image.new("LA", (LARGEUR + 8, debut + pas * len(lignes) + TEXTE_PX), (255, 0))
     d = ImageDraw.Draw(im)
-    d.text((0, 0), titre, font=ft, fill=(255, 255))
+    for i, l in enumerate(titres):
+        d.text((0, i * pas_titre), l, font=ft, fill=(255, 255))
     for i, l in enumerate(lignes):
         d.text((0, debut + i * pas), l, font=fc, fill=(255, 255))
     return recadrer(im)
@@ -80,7 +83,9 @@ if __name__ == "__main__":
         for k, c in enumerate(mur["cards"], 1):
             mots = len(c["texte"].split())
             if mots > MOTS_MAX:
-                print(f"ATTENTION mur {n}, « {c['titre']} » : {mots} mots (25 maximum)")
+                print(f"ATTENTION mur {n}, « {c['titre']} » : {mots} mots ({MOTS_MAX} maximum)")
             im = card(c["titre"], c["texte"])
+            if im.height > HAUTEUR_MAX:
+                print(f"ATTENTION mur {n}, « {c['titre']} » : {im.height} px de haut, la colonne n'en offre que {HAUTEUR_MAX}")
             im.save(dossier / f"{k:02d}.png")
             print(f"mur{n}/{k:02d}.png  {im.width} x {im.height} px  {mots} mots  {c['titre']}")

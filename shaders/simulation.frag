@@ -48,18 +48,17 @@ void main() {
     vec2 pousse;
     fronts(e.xy, pousse);
     v += pousse * onde_poussee;                          // le front d'une note pousse la matière
-    // la matière vient former une card (aspirée), puis elle est relâchée quand la card se dissout
+    // une card se forme : la matière est aspirée dans sa colonne et s'y éteint ;
+    // elle se dissout : la matière revient combler la colonne
     for (int i = 0; i < 8; i++) {
         vec4 s = cartes_etat[i];
         if (s.y == 0.0) continue;
         vec4 r = cartes[i];
         float f = 1.0 - smoothstep(0.0, cartes_portee, length(vers_rect(e.xy, r)));
-        // le coeur du texte : sa ligne médiane (la matière y entre par le haut et le bas, et s'y éteint)
-        float demi = 0.5 * (r.w - r.y);
-        vec2 coeur = e.xy + vers_rect(e.xy, vec4(r.x + demi, r.y + demi, r.z - demi, r.w - demi));
-        vec2 o = e.xy - coeur;                              // du coeur vers le grain
-        v += (s.y > 0.0 ? -1.0 : 1.0) * normalize(o + 1e-5) * condensation * f * smoothstep(0.0, 0.02, length(o));
-        if (s.y > 0.0 && f >= 1.0) {                    // entrée dans le texte : le grain s'y éteint en fondu
+        float demi = 0.5 * min(r.z - r.x, r.w - r.y);       // l'axe du rectangle (vertical pour une colonne)
+        vec2 axe = vers_rect(e.xy, vec4(r.x + demi, r.y + demi, r.z - demi, r.w - demi));
+        v += normalize(axe + 1e-5) * condensation * f * smoothstep(0.0, 0.02, length(axe));
+        if (s.y > 0.0 && f >= 1.0) {                    // entrée dans la colonne : le grain s'y éteint en fondu
             e.z = max(e.z, 0.75 * e.w) + dt * 3.0;      // (puis renaît ailleurs, dans les masses)
         }
     }

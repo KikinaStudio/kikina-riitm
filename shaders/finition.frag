@@ -5,6 +5,7 @@
 uniform sampler2D champs;
 uniform sampler2D matiere;     // lumière accumulée des particules
 uniform sampler2D encre;       // le texte des titres et des cards (1 = blanc)
+uniform float fond;            // lumière du panneau d'une card (la colonne qui coupe le mur)
 uniform float exposition;
 uniform float brume;           // lueur diffuse là où la matière est dense
 uniform float plancher;        // jamais de noir pur : 0.02 à 0.04
@@ -31,6 +32,7 @@ void main() {
         vec4 s = cartes_etat[i], r = cartes[i];
         if (s.x <= 0.0 || p.x < r.x || p.x > r.z || p.y < r.y || p.y > r.w) continue;
         float moment = hasard3(ivec3(g, 4242 + i)) * 0.85;
+        if (i >= 4) l = max(l, fond * s.x);           // le panneau des cards (pas des titres)
         l = max(l, texture(encre, uv).r * s.z * smoothstep(moment, moment + 0.15, s.x));
     }
     l *= 1.0 - grain_force + 2.0 * grain_force * grain;

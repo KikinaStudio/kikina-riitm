@@ -25,6 +25,13 @@ Conception : `docs/superpowers/specs/2026-09-23-etape5-cards-design.md`. Jérém
 - Contenu, noms des ateliers et langue : provisoires, à valider.
 - Les webcams (étape 4) viennent après : en attendant, la présence se simule au clavier (Maj + A Z E R).
 
+### Révision : cards verticales (retour de Jérémie)
+« Je veux des cards verticales avec un titre et plus de texte, qui viennent couper le mur, avec un petit écart en haut et en bas. » Fait :
+- une card = une colonne de presque toute la hauteur (40 px d'écart en haut et en bas), environ 640 px de large, titre sur 1 ou 2 lignes puis environ 45 mots ;
+- la matière est coupée net dans la colonne, qui est un panneau à peine plus clair que le fond (sans ce panneau, là où il y a peu de matière, on ne voyait que du texte sur du noir) ;
+- elle se forme en aspirant la matière voisine, qui s'y éteint ; elle se dissout en laissant la matière revenir ;
+- textes provisoires rallongés (32 à 43 mots), règles mises à jour dans CLAUDE.md.
+
 ### Comment relancer
 ```bash
 cd "/Users/leon/RIITM final"

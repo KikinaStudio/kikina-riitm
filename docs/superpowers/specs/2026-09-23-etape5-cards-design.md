@@ -2,7 +2,16 @@
 
 Décidé avec Jérémie le 23 septembre 2026 : un atelier par mur ; chaque mur porte en permanence le titre de son atelier, plus une card explicative au plus à la fois. Jérémie me laisse concevoir le reste. Les cards passent avant les webcams.
 
-## Ce qu'on voit
+## Révision du 23/09 : cards verticales
+Après un premier essai (cards horizontales dans la moitié haute), Jérémie veut des **cards verticales**, avec un titre et plus de texte, qui **coupent le mur** avec un petit écart en haut et en bas. Désormais :
+- une card = une colonne de haut en bas du mur, moins 40 px en haut et en bas, environ 640 px de large (texte 560 px + 40 px de marge intérieure) ;
+- dedans : titre 80 px sur 1 ou 2 lignes, puis environ 45 mots en 32 px, en haut de la colonne ;
+- la matière est coupée net dans la colonne (creux 100 %, bord de 15 px), la colonne est un panneau à peine plus clair que le fond (`fond` 0,07) ;
+- formation : la matière voisine (150 px) est aspirée dans la colonne et s'y éteint ; dissolution : elle revient combler la colonne ;
+- placement : n'importe où sur le mur, loin des portes (sur toute la hauteur) et du titre de l'atelier.
+Le reste du document décrit la première version, remplacée sur ces points.
+
+## Ce qu'on voit (première version)
 - **Le titre de l'atelier** : en haut à gauche de son mur, petit et discret (capitales espacées, environ 48 px, lumière 70 %). Il se condense au lancement, puis reste.
 - **Les cards** : blanc sur la matière, sans cadre. Un titre (80 px) et un texte court (34 px, 25 mots maximum), 700 à 1000 px de large, dans la moitié haute du mur, jamais sur une porte, jamais à cheval sur deux murs.
 - **Une card vit 26 s** : 4 s où la matière vient se condenser (les grains voisins sont aspirés vers la card, le texte apparaît grain par grain), 18 s lisible, 4 s où elle se dissout (le texte s'efface grain par grain, la matière est relâchée vers l'extérieur). Puis 8 s de matière seule avant la card suivante.

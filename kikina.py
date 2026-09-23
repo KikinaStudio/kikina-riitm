@@ -274,7 +274,7 @@ class Kikina(mglw.WindowConfig):
         self.matiere.use(0)
         self.champs.use(1)
         self.cartes.tex.use(5)
-        regler(self.progs["finition"], matiere=0, champs=1, encre=5, exposition=p["exposition"], brume=p["brume"],
+        regler(self.progs["finition"], matiere=0, champs=1, encre=5, fond=self.cfg["cartes"]["fond"], exposition=p["exposition"], brume=p["brume"],
                plancher=m["plancher"], grain_px=m["grain_px"], grain_force=m["grain_force"],
                grain_image=int(self.temps * m["grain_ips"]), **commun)
         self.vaos["finition"].render(moderngl.TRIANGLE_STRIP)
