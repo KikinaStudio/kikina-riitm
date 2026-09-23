@@ -1,36 +1,36 @@
 {
-  "_lisez_moi": "Textes PROVISOIRES des titres d'ateliers et des cards (colonnes verticales), tirés du dossier CNM. Après modification : .venv/bin/python outils/fabriquer_cards.py. Un mur par bloc, dans l'ordre mur 1 à mur 4. Environ 45 mots par texte, 50 au plus.",
+  "_lisez_moi": "Textes PROVISOIRES des titres d'ateliers et des cards (colonnes verticales), tirés du Notion « RIITM - Expérience immersive Kikina @ Festival CNN » (zones 1 à 4, une par mur). Par mur : l'invitation, ce que la salle perçoit, le cas d'usage. Après modification : .venv/bin/python outils/fabriquer_cards.py. Environ 40 mots par texte, 50 au plus ; titres courts (2 lignes).",
   "murs": [
     {
-      "atelier": "Commerce",
+      "atelier": "Accueil",
       "cards": [
-        {"famille": "salle", "titre": "Cet espace vous écoute", "texte": "Des caméras mesurent le mouvement dans la salle, sans enregistrer aucune image. Bougez : la musique se densifie et la matière s’agite. Restez immobiles : elle se pose. Chaque note jouée devient une onde sur le mur, là où vous êtes."},
-        {"famille": "tech", "titre": "Composée, puis dirigée", "texte": "La musique est écrite par des compositeurs, qui en gardent tous les droits. Notre moteur ne compose pas à leur place : il la dirige en temps réel, selon des règles issues des neurosciences et selon ce qui se passe dans le lieu."},
-        {"famille": "lieux", "titre": "En boutique", "texte": "Dans un magasin, la même œuvre suit l’affluence et l’heure : plus dense quand les clients arrivent, plus apaisée quand le lieu se vide. Une identité sonore propre au lieu, à la place des playlists qui tournent en boucle."}
+        {"famille": "invitation", "titre": "Vos trois premiers pas", "texte": "Avancez un par un et écoutez. Vos trois premiers pas font naître trois notes, qui ne sonnent que pour vous. La musique ne vous attendait pas : elle vous accueille, au rythme de votre marche."},
+        {"famille": "perception", "titre": "Vous êtes entrés", "texte": "Dès que vous franchissez le seuil, la salle suit votre silhouette. Seul compte le rythme de vos pas : il passe à la musique, qui répond aussitôt, note après note."},
+        {"famille": "cas d’usage", "titre": "En boutique", "texte": "Franchir la porte d’une boutique, c’est entendre sa première phrase. Une signature sonore de bienvenue, différente pour chaque personne qui entre, à la place d’une playlist qui ne sait pas que vous êtes là."}
       ]
     },
     {
-      "atelier": "Bien-être",
+      "atelier": "Densité",
       "cards": [
-        {"famille": "salle", "titre": "Votre mouvement compte", "texte": "Chaque geste nourrit la musique. Plus vous êtes nombreux à bouger, plus elle s’étoffe. Quand vous ralentissez, elle ralentit avec vous, jusqu’à ne laisser que quelques notes, que vous verrez passer sur le mur."},
-        {"famille": "neurosciences", "titre": "Stress, attention, temps", "texte": "La musique agit sur des états du corps et de l’esprit : le stress, l’attention, la perception du temps. Nos règles de pilotage s’appuient sur la recherche en neurosciences, pour accompagner ces états plutôt que les bousculer."},
-        {"famille": "lieux", "titre": "Au spa", "texte": "Dans un espace de soin ou de détente, une musique qui ne tourne jamais en boucle. Elle évolue avec le moment et la fréquentation, et accompagne la détente sans jamais attirer l’attention sur elle."}
+        {"famille": "invitation", "titre": "Entrez dans le carré", "texte": "Entrez un par un, puis tous ensemble. Chaque personne ajoute une couche à la musique. Seul, vous entendez une ligne ; à dix, un paysage entier. Le groupe compose sans le savoir."},
+        {"famille": "perception", "titre": "Combien sommes-nous ?", "texte": "La salle compte les présences dans la zone, sans chercher à savoir qui vous êtes. Plus le groupe se rassemble, plus la musique s’épaissit, en fondu, sans jamais couper."},
+        {"famille": "cas d’usage", "titre": "Suivre l’affluence", "texte": "Dans un hôtel ou une boutique, la même œuvre s’allège aux heures creuses et s’étoffe quand le lieu se remplit. L’ambiance suit la vie du lieu au lieu de l’ignorer."}
       ]
     },
     {
-      "atelier": "Hôtellerie",
+      "atelier": "Mouvement",
       "cards": [
-        {"famille": "salle", "titre": "Ici, le son est vivant", "texte": "Ce que vous entendez n’est pas une piste enregistrée. La musique se déploie maintenant, à partir de ce que font les personnes présentes dans la salle. L’image suit le même mouvement : elle fait ce que fait le son."},
-        {"famille": "tech", "titre": "Une IA qui dirige", "texte": "Notre IA ne remplace pas le compositeur. Elle décide, en temps réel, ce qu’une œuvre écrite par des humains doit devenir, ici et maintenant. La musique reste une œuvre, avec un auteur."},
-        {"famille": "lieux", "titre": "À l’hôtel", "texte": "Du lobby au spa, du matin au soir, une même œuvre change de visage selon l’heure, les espaces et l’affluence. Une identité sonore cohérente pour tout l’établissement, qui ne se répète jamais."}
+        {"famille": "invitation", "titre": "Immobiles, puis vite", "texte": "Restez immobiles : la musique respire, lente, presque suspendue. Maintenant bougez, vite : elle devient dense et rapide. Entre les deux, elle suit exactement l’énergie de vos gestes."},
+        {"famille": "perception", "titre": "L’énergie des gestes", "texte": "La salle mesure la quantité de mouvement dans la zone, pas vos gestes un par un. Plus vous vous agitez, plus la matière s’agite sur le mur et plus la musique s’intensifie."},
+        {"famille": "cas d’usage", "titre": "Au spa", "texte": "Pendant un soin, le son peut suivre le geste lent et ample du praticien, lui faire écho et prolonger la détente. La musique accompagne le corps au lieu de le couvrir."}
       ]
     },
     {
-      "atelier": "Santé",
+      "atelier": "Proximité",
       "cards": [
-        {"famille": "salle", "titre": "Immobiles, écoutez", "texte": "Quand plus rien ne bouge, la matière se dépose et la musique se fait rare. Chaque note devient alors visible : une onde qui part de là où vous êtes. Le calme aussi est une manière de jouer."},
-        {"famille": "neurosciences", "titre": "Institut du Cerveau", "texte": "Nos règles de pilotage viennent de la recherche en neurosciences. Nous travaillons avec des chercheurs de l’Institut du Cerveau, notamment sur la transition entre l’éveil et le sommeil, et sur les états de conscience."},
-        {"famille": "lieux", "titre": "À l’hôpital", "texte": "En salle d’attente ou en chambre, la musique suit le rythme du service, apaise l’attente et accompagne le moment, sans jamais s’imposer. Ce qui est validé à l’hôpital se transpose ensuite aux autres lieux."}
+        {"famille": "invitation", "titre": "Approchez", "texte": "Il y a un objet, là. Approchez-vous : un son monte, s’éclaire, se précise à mesure que vous avancez. Éloignez-vous : il se retire."},
+        {"famille": "perception", "titre": "Un son qui appelle", "texte": "La salle mesure la distance entre vous et l’objet. À mesure que vous approchez, le son gagne en présence et en détail. Il guide sans rien imposer : c’est vous qui choisissez d’avancer."},
+        {"famille": "cas d’usage", "titre": "En rayon", "texte": "Dans un supermarché, un son discret peut attirer vers un produit ou un nouveau rayon. Un nudge sonore : une invitation qu’on entend en s’approchant, jamais une annonce qu’on subit."}
       ]
     }
   ]

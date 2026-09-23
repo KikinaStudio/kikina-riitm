@@ -21,7 +21,7 @@ Les ateliers sont ceux du Notion (Accueil - 3 premiers pas, Densité - couches, 
 
 ## 2. Le projet en bref
 - Groupes d'environ 10 personnes, 15 minutes, dans une salle de 15 x 6,6 m dont les 4 murs sont projetés par 11 projecteurs (gérés par la salle).
-- 4 zones interactives = 4 ateliers, un par mur (décidé le 23/09). Dans chacune, une webcam mesure le mouvement des visiteurs. Plus ça bouge, plus la musique se densifie.
+- 4 zones interactives = 4 ateliers du Notion, un par mur (décidé le 23/09) : mur 1 Accueil (3 premiers pas), mur 2 Densité (couches), mur 3 Mouvement (activité), mur 4 Proximité (nudge). Le Cœur (la bague) est le final, sur toute la salle. Dans chacune, une webcam mesure le mouvement des visiteurs. Plus ça bouge, plus la musique se densifie.
 - La musique (Arthur, moteur Kikinator) est hors de ce projet. Ce projet ne fait que l'image.
 - Intention : l'image fait ce que fait le son. Le visiteur doit sentir une matière vivante qui l'écoute, pas une démo technique.
 

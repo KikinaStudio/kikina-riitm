@@ -25,6 +25,10 @@ Conception : `docs/superpowers/specs/2026-09-23-etape5-cards-design.md`. Jérém
 - Contenu, noms des ateliers et langue : provisoires, à valider.
 - Les webcams (étape 4) viennent après : en attendant, la présence se simule au clavier (Maj + A Z E R).
 
+### Correction : les vrais ateliers (retour de Jérémie)
+J'avais inventé 4 ateliers (Commerce, Bien-être, Hôtellerie, Santé) à partir d'un dossier CNM. Les vrais sont dans le Notion « RIITM - Expérience immersive Kikina @ Festival CNN » (5 zones). Décidé : mur 1 Accueil (3 premiers pas), mur 2 Densité (couches), mur 3 Mouvement (activité), mur 4 Proximité (nudge), le Cœur (la bague) en final sur toute la salle. Cards réécrites à partir du Notion (invitation, ce que la salle perçoit, cas d'usage), sans chiffres non sourcés. Les liens Notion sont maintenant en tête de CLAUDE.md et dans ma mémoire, pour les prochaines sessions.
+L'outil `fabriquer_cards.py` ne coupe plus un mot plus large que la colonne : il prévient (« Approchez-vous » était tronqué, devenu « Approchez »).
+
 ### Révision : cards verticales (retour de Jérémie)
 « Je veux des cards verticales avec un titre et plus de texte, qui viennent couper le mur, avec un petit écart en haut et en bas. » Fait :
 - une card = une colonne de presque toute la hauteur (40 px d'écart en haut et en bas), environ 640 px de large, titre sur 1 ou 2 lignes puis environ 45 mots ;

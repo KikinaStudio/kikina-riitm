@@ -63,7 +63,10 @@ def card(titre, texte):
     titres, lignes = couper(titre, ft, LARGEUR), couper(texte, fc, LARGEUR)
     pas_titre, pas = round(TITRE_PX * 1.1), round(TEXTE_PX * 1.45)
     debut = pas_titre * len(titres) + round(TITRE_PX * 0.45)
-    im = Image.new("LA", (LARGEUR + 8, debut + pas * len(lignes) + TEXTE_PX), (255, 0))
+    large = max([LARGEUR] + [round(ft.getlength(l)) for l in titres] + [round(fc.getlength(l)) for l in lignes])
+    if large > LARGEUR:
+        print(f"ATTENTION « {titre} » : un mot dépasse la colonne ({large} px pour {LARGEUR}), la colonne sera plus large")
+    im = Image.new("LA", (large + 8, debut + pas * len(lignes) + TEXTE_PX), (255, 0))
     d = ImageDraw.Draw(im)
     for i, l in enumerate(titres):
         d.text((0, i * pas_titre), l, font=ft, fill=(255, 255))
