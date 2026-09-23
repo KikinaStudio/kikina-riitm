@@ -3,6 +3,7 @@
 Ce dossier produit un flux vidéo NDI nommé `KIKINA` (le bandeau 360 de la salle).
 - `kikina.py` : le moteur visuel (la matière, qui écoute la musique et les zones).
 - `entrees.py` : l'écoute du son et des capteurs (OSC). `python entrees.py` lance son autotest.
+- `cartes.py` : les titres des ateliers et les cards. `python cartes.py` vérifie leur placement et dessine `captures/plan_cards.png`.
 - `test_ndi.py` : le test du tuyau NDI, à relancer sur chaque nouvelle machine.
 
 Le "Terminal" (macOS) ou "PowerShell" (Windows) est la fenêtre où l'on tape des commandes.
@@ -124,3 +125,22 @@ Tester l'OSC sans capteur, pendant que `kikina.py` tourne (la zone 3 s'agite pen
 ```bash
 .venv/bin/python -c "from pythonosc.udp_client import SimpleUDPClient as C; C('127.0.0.1', 7000).send_message('/zone/3/energie', 1.0)"
 ```
+
+## Les titres et les cards (étape 5)
+
+Chaque mur a son dossier `assets/cards/murN/` (un atelier par mur) :
+- `titre.png` : le nom de l'atelier, toujours affiché en haut à gauche du mur ;
+- tous les autres PNG : les cards du mur, montrées par ordre alphabétique de leur nom, une à la fois, tant qu'un groupe est présent dans la zone. Chaque card vit 26 s : la matière se condense pour la former (4 s), elle reste lisible (18 s), puis se dissout (4 s).
+
+**Ajouter une card** : déposer un PNG dans le dossier du mur. Pas besoin de relancer, les dossiers sont relus toutes les 2 s. Le PNG : blanc sur fond transparent, à la taille réelle en pixels (700 à 1000 px de large ; 260 px de haut au plus pour tenir sur le mur 4, où la porte laisse peu de place). Une card trop grande pour son mur est ignorée et la console le dit. Pour vérifier avant le show :
+```bash
+.venv/bin/python cartes.py
+```
+
+**Les textes provisoires** sont dans `assets/cards/cards.json`. Après modification, refaire les PNG (Mac uniquement, police Avenir Next) :
+```bash
+.venv/bin/python outils/fabriquer_cards.py
+```
+Un PNG dessiné dans Figma remplace simplement le fichier du même nom.
+
+Tester dans le simulateur : **Maj + A, Z, E, R** met un groupe immobile dans la zone 1 à 4 ; ses cards arrivent 2 s après. Les durées, la lumière des titres et le creux derrière le texte se règlent dans le bloc `[cartes]` de `config.toml`.

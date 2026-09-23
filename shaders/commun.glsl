@@ -100,3 +100,15 @@ float fronts(vec2 p, out vec2 dir) {
     }
     return s;
 }
+
+// Les titres des ateliers et les cards : 8 rectangles (x0, y0, x1, y1 ; mêmes unités que les particules)
+// et leur état (visibilité 0 à 1 ; sens : +1 la matière se condense, -1 elle se dissout, 0 ; lumière).
+uniform vec4 cartes[8];
+uniform vec4 cartes_etat[8];
+
+// Vecteur du point p vers le point le plus proche du rectangle r (nul dedans). Le bandeau boucle en x.
+vec2 vers_rect(vec2 p, vec4 r) {
+    float cx = 0.5 * (r.x + r.z);
+    p.x = cx + (p.x - cx) - aspect * round((p.x - cx) / aspect);
+    return clamp(p, r.xy, r.zw) - p;
+}

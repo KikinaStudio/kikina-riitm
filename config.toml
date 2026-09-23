@@ -101,3 +101,21 @@ octaves = [2.5, 5.5]       # octave qui va en bas du mur, octave qui va en haut 
 plages = [[0, 5186], [5186, 7321], [7321, 12311], [12311, 14446]]
 presence_force = 0.25      # agitation d'une présence immobile (le mouvement va jusqu'à 1)
 presence_s = 1             # lissage de la présence
+
+# ---------------------------------------------------------------------------
+# Les titres des ateliers et les cards (étape 5). Se recharge à chaud.
+# Chaque mur a son dossier assets/cards/murN/ : titre.png (toujours affiché) et ses cards (les autres PNG).
+[cartes]
+apparition_s = 4           # la matière se condense pour former la card
+affichage_s = 18           # la card est lisible (vie totale : 4 + 18 + 4 = 26 s)
+dissolution_s = 4          # elle se dissout
+pause_s = 8                # matière seule entre deux cards d'un même mur
+attente_s = 2              # délai entre l'arrivée d'un groupe dans la zone et sa première card
+presence_seuil = 0.5       # présence (0 à 1) à partir de laquelle un groupe est "là"
+titre_lumiere = 0.7        # luminosité du titre de l'atelier (1 = comme les cards)
+haut_px = 40               # distance entre le haut du mur et le texte
+marge_px = 60              # marge autour du texte : bords du mur, portes, titre
+creux = 0.8                # part des grains éteints derrière le texte (0.8 = 80 %)
+creux_bord_px = 40         # le creux déborde un peu autour du texte, en fondu
+portee_px = 300            # distance d'où la matière vient former la card
+condensation = 0.25        # vitesse à laquelle la matière est aspirée, puis relâchée

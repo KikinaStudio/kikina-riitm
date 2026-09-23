@@ -1,0 +1,37 @@
+{
+  "_lisez_moi": "Textes PROVISOIRES des titres d'ateliers et des cards, tirés du dossier CNM. Après modification : .venv/bin/python outils/fabriquer_cards.py. Un mur par bloc, dans l'ordre mur 1 à mur 4. 25 mots maximum par texte.",
+  "murs": [
+    {
+      "atelier": "Commerce",
+      "cards": [
+        {"famille": "salle", "titre": "Cet espace vous écoute", "texte": "Bougez : la musique se densifie. Restez immobiles : elle se pose. L’image fait ce que fait le son."},
+        {"famille": "tech", "titre": "Composée, puis dirigée", "texte": "La musique est écrite par des compositeurs. Notre moteur la dirige en temps réel, selon ce qui se passe dans le lieu."},
+        {"famille": "lieux", "titre": "En boutique", "texte": "Dense quand le magasin se remplit, apaisée quand il se vide : la même œuvre suit l’affluence, heure après heure."}
+      ]
+    },
+    {
+      "atelier": "Bien-être",
+      "cards": [
+        {"famille": "salle", "titre": "Votre mouvement compte", "texte": "Chaque geste nourrit la musique. Quand vous ralentissez, elle ralentit avec vous."},
+        {"famille": "neurosciences", "titre": "Stress, attention, temps", "texte": "La musique agit sur des états du corps et de l’esprit : le stress, l’attention, la perception du temps."},
+        {"famille": "lieux", "titre": "Au spa", "texte": "Une musique qui ne tourne jamais en boucle et accompagne la détente, sans attirer l’attention sur elle."}
+      ]
+    },
+    {
+      "atelier": "Hôtellerie",
+      "cards": [
+        {"famille": "salle", "titre": "Ici, le son est vivant", "texte": "Plus vous êtes nombreux à bouger, plus la matière s’agite et plus la musique s’étoffe."},
+        {"famille": "tech", "titre": "Une IA qui dirige", "texte": "Notre IA ne compose pas. Elle dirige, en temps réel, une œuvre écrite par des humains, qui en gardent les droits."},
+        {"famille": "lieux", "titre": "À l’hôtel", "texte": "Du lobby au spa, une même œuvre change de visage selon l’heure, les espaces et l’affluence."}
+      ]
+    },
+    {
+      "atelier": "Santé",
+      "cards": [
+        {"famille": "salle", "titre": "Immobiles, écoutez", "texte": "Quand plus rien ne bouge, la matière se dépose et la musique se fait rare. Chaque note devient visible."},
+        {"famille": "neurosciences", "titre": "Institut du Cerveau", "texte": "Nos règles de pilotage viennent de la recherche en neurosciences, avec des chercheurs de l’Institut du Cerveau."},
+        {"famille": "lieux", "titre": "À l’hôpital", "texte": "En salle d’attente, la musique suit le rythme du service et accompagne l’attente, sans jamais s’imposer."}
+      ]
+    }
+  ]
+}

@@ -4,6 +4,36 @@
 
 ---
 
+## 23 septembre 2026 - Étape 5 : titres et cards (à valider par Jérémie)
+
+Conception : `docs/superpowers/specs/2026-09-23-etape5-cards-design.md`. Jérémie m'a laissé concevoir.
+
+### Ce qui a été fait
+- `cartes.py` (nouveau) : lit `assets/cards/murN/`, place, fait vivre titres et cards. `python cartes.py` = autotest (les 12 cards trouvent une place qui respecte portes, murs, moitié haute et titre ; plan dans `captures/plan_cards.png`).
+- Chaque mur : le titre de son atelier en permanence (haut gauche, capitales espacées 48 px, lumière 70 %), et quand un groupe est dans la zone, ses cards l'une après l'autre (26 s chacune, 8 s de matière seule entre deux).
+- La card se forme : le texte apparaît grain par grain, la matière voisine est aspirée vers le texte et s'y éteint (les grains qui y entrent vieillissent vite et renaissent ailleurs). Elle se dissout : le texte s'efface grain par grain, la matière est relâchée vers l'extérieur. Derrière le texte, 80 % des grains sont éteints.
+- Contenu provisoire tiré du dossier CNM : 4 ateliers = les 4 secteurs du dossier (mur 1 Commerce, mur 2 Bien-être, mur 3 Hôtellerie, mur 4 Santé), 3 cards par mur (comment l'espace réagit, tech ou neurosciences, le lieu). Textes dans `assets/cards/cards.json`, PNG fabriqués par `outils/fabriquer_cards.py` (Avenir Next).
+
+### Ce qui marche
+- Déposer un PNG dans un dossier pendant que le moteur tourne : il passe en card suivante, sans relancer (critère de l'étape).
+- Lisible à taille réelle : titre de card 80 px (24 cm), texte 34 px (10 cm), le texte prend le grain de la matière.
+- 30 i/s, rendu 14 ms en moyenne, 16,5 ms au pire avec une card qui se forme.
+
+### Ce qui reste fragile
+- Premier essai de condensation : la matière aspirée dessinait un cadre lumineux autour du texte, puis une ligne en travers. Corrigé en éteignant les grains qui entrent dans le texte. À juger en mouvement.
+- Mur 4 : la card la plus haute (219 px) n'a qu'une position possible sous le titre. Garder les cards du mur 4 sous 260 px de haut.
+- Contenu, noms des ateliers et langue : provisoires, à valider.
+- Les webcams (étape 4) viennent après : en attendant, la présence se simule au clavier (Maj + A Z E R).
+
+### Comment relancer
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/python kikina.py
+```
+Puis Maj + R (un groupe dans la zone 4) : la première card du mur 4 se forme 2 s après.
+
+---
+
 ## 23 septembre 2026 - Étape 3 : la réactivité (à valider par Jérémie)
 
 Conception : `docs/superpowers/specs/2026-09-23-etape3-reactivite-design.md`. Plan : `docs/superpowers/plans/2026-09-23-etape3-reactivite.md`.

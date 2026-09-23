@@ -24,6 +24,8 @@ uniform float remous_force;      // vitesse des remous à l'agitation maximale
 uniform float soulevement;       // vitesse de montée là où ça s'agite
 uniform vec2 vie;                // durée de vie mini et maxi (s)
 uniform float onde_poussee;      // vitesse donnée par le front d'une note
+uniform float cartes_portee;     // distance d'où la matière vient former une card (hauteurs)
+uniform float condensation;      // vitesse de cette aspiration, puis du relâchement
 out vec4 sortie;
 
 void main() {
@@ -46,6 +48,21 @@ void main() {
     vec2 pousse;
     fronts(e.xy, pousse);
     v += pousse * onde_poussee;                          // le front d'une note pousse la matière
+    // la matière vient former une card (aspirée), puis elle est relâchée quand la card se dissout
+    for (int i = 0; i < 8; i++) {
+        vec4 s = cartes_etat[i];
+        if (s.y == 0.0) continue;
+        vec4 r = cartes[i];
+        float f = 1.0 - smoothstep(0.0, cartes_portee, length(vers_rect(e.xy, r)));
+        // le coeur du texte : sa ligne médiane (la matière y entre par le haut et le bas, et s'y éteint)
+        float demi = 0.5 * (r.w - r.y);
+        vec2 coeur = e.xy + vers_rect(e.xy, vec4(r.x + demi, r.y + demi, r.z - demi, r.w - demi));
+        vec2 o = e.xy - coeur;                              // du coeur vers le grain
+        v += (s.y > 0.0 ? -1.0 : 1.0) * normalize(o + 1e-5) * condensation * f * smoothstep(0.0, 0.02, length(o));
+        if (s.y > 0.0 && f >= 1.0) {                    // entrée dans le texte : le grain s'y éteint en fondu
+            e.z = max(e.z, 0.75 * e.w) + dt * 3.0;      // (puis renaît ailleurs, dans les masses)
+        }
+    }
     // les bords freinent : la matière ne s'entasse ni en haut ni en bas
     v.y *= mix(smoothstep(0.0, 0.08, e.y), smoothstep(1.0, 0.92, e.y), step(0.0, v.y));
     e.xy += v * allure * dt;

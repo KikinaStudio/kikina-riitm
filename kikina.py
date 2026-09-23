@@ -29,12 +29,11 @@ from cyndilib.video_frame import VideoSendFrame
 from cyndilib.wrapper.ndi_structs import FourCC
 from PIL import Image
 
+from cartes import LARGEUR_REF, MURS, Cartes
 from entrees import Entrees
 
 ICI = Path(__file__).parent
 SHADERS = ICI / "shaders"
-LARGEUR_REF = 14446  # largeur pour laquelle les positions des murs sont données
-MURS = ((0, 5186), (5186, 7321), (7321, 12311), (12311, 14446))
 REGLAGES = ("calme", "moyen", "dense")
 PROGRAMMES = {  # nom : (vertex, fragment)
     "simulation": ("plein_cadre.vert", "simulation.frag"),
@@ -136,6 +135,7 @@ class Kikina(mglw.WindowConfig):
         self.excitation_tex.repeat_x, self.excitation_tex.repeat_y = True, False
         self.souris = None  # (x, y) en fraction du bandeau, et énergie du mouvement depuis la dernière image
         self.souris_energie = 0.0
+        self.cartes = Cartes(ctx, self.cfg, self.w, self.h)  # titres des ateliers et cards
         self.image = ctx.texture((self.w, self.h), 4)
         self.image_fbo = ctx.framebuffer([self.image])
         self.pixels = np.empty(self.w * self.h * 4, dtype=np.uint8)
@@ -223,12 +223,15 @@ class Kikina(mglw.WindowConfig):
         self.temps += dt
         self.n += 1
         self.agiter(m, dt)
+        self.cartes.avancer(dt, [self.lisse.get(f"presence{i}", 0.0) for i in range(4)], self.cfg)
+        rects, etats = self.cartes.uniformes()
+        c, H = self.cfg["cartes"], self.cfg["sortie"]["hauteur"]
         commun = dict(
             aspect=self.aspect, temps=self.temps, echelle=self.scale,
             courant_echelle=m["courant_echelle"], courant_evolution=m["courant_evolution"],
             ondes=self.ondes_suivantes(mus, dt),
             onde_vitesse=mus["onde_rayon_px"] / self.cfg["sortie"]["hauteur"] / (1.5 * mus["onde_duree_s"]),
-            onde_duree=mus["onde_duree_s"], onde_largeur=mus["onde_largeur"],
+            onde_duree=mus["onde_duree_s"], onde_largeur=mus["onde_largeur"], cartes=rects, cartes_etat=etats,
         )
 
         self.champs_fbo.use()
@@ -245,6 +248,7 @@ class Kikina(mglw.WindowConfig):
         self.excitation_tex.use(3)
         regler(self.progs["simulation"], etat=0, champs=1, remous=2, excitation=3, dt=dt, image=self.n,
                eveil=p["eveil"], vie=tuple(m["vie_s"]), onde_poussee=mus["onde_poussee"],
+               cartes_portee=c["portee_px"] / H, condensation=c["condensation"],
                **{k: m[k] for k in ("repos_hauteur", "repos_force", "repos_etalement", "turbulence_repos", "turbulence_eveil",
                                     "remous_force", "soulevement")}, **commun)
         self.vaos["simulation"].render(moderngl.TRIANGLE_STRIP)
@@ -260,7 +264,8 @@ class Kikina(mglw.WindowConfig):
         regler(self.progs["particules"], etat=0, champs=1, excitation=3, nombre=float(self.nombre),
                densite=m["densite"], eveil=p["eveil"], taille=m["taille_px"],
                voile_contraste=p["voile_contraste"], onde_eclat=mus["onde_eclat"],
-               scintille=brillance * mus["brillance_force"], **commun)
+               scintille=brillance * mus["brillance_force"], creux=c["creux"], creux_bord=c["creux_bord_px"] / H,
+               **commun)
         allumees = min(self.nombre, int(self.nombre * (m["densite"] + 0.05)) + 1)
         self.vaos["particules"].render(moderngl.POINTS, vertices=allumees)
         self.ctx.disable(moderngl.BLEND)
@@ -268,7 +273,8 @@ class Kikina(mglw.WindowConfig):
         self.image_fbo.use()
         self.matiere.use(0)
         self.champs.use(1)
-        regler(self.progs["finition"], matiere=0, champs=1, exposition=p["exposition"], brume=p["brume"],
+        self.cartes.tex.use(5)
+        regler(self.progs["finition"], matiere=0, champs=1, encre=5, exposition=p["exposition"], brume=p["brume"],
                plancher=m["plancher"], grain_px=m["grain_px"], grain_force=m["grain_force"],
                grain_image=int(self.temps * m["grain_ips"]), **commun)
         self.vaos["finition"].render(moderngl.TRIANGLE_STRIP)

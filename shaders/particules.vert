@@ -13,6 +13,8 @@ uniform float echelle;         // scale de config.toml
 uniform float voile_contraste; // 0 = matière uniforme, 1 = masses et vides marqués
 uniform float onde_eclat;      // lumière en plus sur le front d'une note
 uniform float scintille;       // frémissement des grains fins (son clair)
+uniform float creux;          // part des grains éteints derrière le texte
+uniform float creux_bord;     // le creux déborde autour du texte, en fondu (hauteurs)
 out float lumiere;
 
 void main() {
@@ -41,6 +43,14 @@ void main() {
     lumiere *= 1.0 + onde_eclat * min(fronts(e.xy, inutile), 1.5);   // le front d'une note s'éclaire
     // son clair : les grains fins frémissent, chacun à son rythme (3 à 7 fois par seconde)
     lumiere *= 1.0 + scintille * (1.0 - gros) * sin(6.2832 * (temps * (3.0 + 4.0 * hasard(id * 23U + 7U)) + hasard(id * 29U + 3U)));
+    // derrière le texte des cards, la plupart des grains s'éteignent : le texte reste lisible
+    float couvert = 0.0;
+    for (int i = 0; i < 8; i++) {
+        if (cartes_etat[i].x <= 0.0) continue;
+        float d = length(vers_rect(e.xy, cartes[i]));
+        couvert = max(couvert, cartes_etat[i].x * (1.0 - smoothstep(0.0, creux_bord, d)));
+    }
+    lumiere *= 1.0 - creux * couvert;
 
     gl_PointSize = (taille * (0.8 + 1.6 * gros) + 1.0) * echelle;
     gl_Position = lumiere < 0.004
