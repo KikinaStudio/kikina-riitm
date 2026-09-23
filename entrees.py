@@ -21,6 +21,7 @@ ICI = Path(__file__).parent
 BLOC = 1024
 FENETRE = 4096     # pour les bandes et la hauteur des notes (précision 11 Hz)
 SILENCE_DB = -60   # en dessous : on n'écoute rien
+RESERVE_S = 0.25   # simulateur : son préparé à l'avance, pour qu'une image lente ne le fasse pas craquer
 RECUL = 26         # blocs de mémoire pour juger si une note ressort (0,6 s)
 OCTAVES = [60 * 2 ** k for k in range(7)]  # 6 bandes d'une octave, de 60 à 3840 Hz
 
@@ -108,12 +109,13 @@ class Entrees:
         e = cfg["entrees"]
         self._zones = {}                        # (mesure, zone) : (valeur, date de réception)
         self._densite, self._densite_date = 0.0, -1e9
+        self.en_route = deque()                 # simulateur : (moment où on l'entendra, force, Hz)
         if e["simulateur"]:
             self.son, sr = lire_wav(ICI / e["son_test"])
             self.pos = 0
             self.analyse = Analyse(sr, cfg["musique"]["notes_saut_db"])
             self.flux = sd.OutputStream(samplerate=sr, channels=self.son.shape[1], blocksize=BLOC,
-                                        dtype="float32", callback=self._jouer)
+                                        latency=RESERVE_S, dtype="float32", callback=self._jouer)
             print(f"Son : {e['son_test']} en boucle (simulateur)")
         else:
             appareil = trouver_entree(e["audio_entree"])
@@ -139,6 +141,8 @@ class Entrees:
         self.pos = (self.pos + n) % len(self.son)
         sortie[:] = bloc
         self.analyse.bloc(bloc.mean(axis=1))
+        while self.analyse.notes:  # ce bloc sortira des haut-parleurs dans `latency` secondes
+            self.en_route.append((time.monotonic() + self.flux.latency, *self.analyse.notes.popleft()))
 
     def _ecouter(self, entree, n, temps, statut):
         self.analyse.bloc(entree.mean(axis=1))
@@ -153,6 +157,15 @@ class Entrees:
             self._densite, self._densite_date = v, time.monotonic()
         elif len(m) == 3 and m[0] == "zone" and m[1] in ("1", "2", "3", "4") and m[2] in ("presence", "energie"):
             self._zones[m[2], int(m[1]) - 1] = v, time.monotonic()
+
+    def notes(self):
+        """Notes qu'on entend maintenant : liste de (force 0 à 1, fréquence en Hz)."""
+        if not isinstance(self.flux, sd.OutputStream):  # vraie entrée : on les entend déjà
+            return [self.analyse.notes.popleft() for _ in range(len(self.analyse.notes))]
+        dues = []
+        while self.en_route and self.en_route[0][0] <= time.monotonic():
+            dues.append(self.en_route.popleft()[1:])
+        return dues
 
     def zone(self, mesure, i):
         """Dernière valeur reçue ("presence" ou "energie", zone 0 à 3), 0 si rien reçu depuis 3 s (capteur arrêté)."""

@@ -339,9 +339,7 @@ class Kikina(mglw.WindowConfig):
             o[2] += dt
         while self.ondes and self.ondes[0][2] > mus["onde_duree_s"]:
             self.ondes.popleft()
-        notes = self.entrees.analyse.notes
-        while notes:
-            force, freq = notes.popleft()
+        for force, freq in self.entrees.notes():
             self.notes_vues += 1
             col = self.excitation.max(axis=0)
             if col.max() > 0.05:  # là où ça bouge : tirage au hasard pondéré par l'agitation
