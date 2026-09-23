@@ -38,6 +38,10 @@ Conception : `docs/superpowers/specs/2026-09-23-etape3-reactivite-design.md`. Pl
 - Deux Kikina lancés en même temps : le second plante (deux sources NDI `KIKINA`). Toujours fermer l'ancien avant de relancer.
 - Étape 1 bis (PC du show) toujours pas faite.
 
+### Retours de Jérémie (23/09, après premier essai)
+- Anneaux : pas trop forts mais trop grands. Réglage `onde_rayon_px` (rayon final d'une note forte) : 450 px au lieu d'environ 1200.
+- Décidé : **un atelier par mur** (zone N = mur N). Chaque mur porte **en permanence le titre de son atelier** (il sépare et nomme les zones), plus une card explicative au plus à la fois. À concevoir à l'étape des cards. Contrainte : le mur 4 n'a que 3,6 m libres en haut (porte), titre court. CLAUDE.md mis à jour.
+
 ### Comment relancer
 ```bash
 cd "/Users/leon/RIITM final"

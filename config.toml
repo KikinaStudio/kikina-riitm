@@ -96,7 +96,7 @@ onde_eclat = 2.0           # lumière en plus sur le front (0 = coupé)
 octaves = [2.5, 5.5]       # octave qui va en bas du mur, octave qui va en haut (4 = do à 262 Hz)
 
 # Les zones : plage de x de chaque zone, en px sur la largeur de référence 14446.
-# Par défaut zone N = mur N, en attendant l'implantation réelle dans la salle.
+# Zone N = mur N : un atelier par mur (décidé le 23/09).
 [zones]
 plages = [[0, 5186], [5186, 7321], [7321, 12311], [12311, 14446]]
 presence_force = 0.25      # agitation d'une présence immobile (le mouvement va jusqu'à 1)

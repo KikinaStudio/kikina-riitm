@@ -13,7 +13,7 @@ Jérémie, directeur créatif de Kikina. Il n'est pas développeur. Il dirige l'
 
 ## 2. Le projet en bref
 - Groupes d'environ 10 personnes, 15 minutes, dans une salle de 15 x 6,6 m dont les 4 murs sont projetés par 11 projecteurs (gérés par la salle).
-- 4 zones interactives. Dans chacune, une webcam mesure le mouvement des visiteurs. Plus ça bouge, plus la musique se densifie.
+- 4 zones interactives = 4 ateliers, un par mur (décidé le 23/09). Dans chacune, une webcam mesure le mouvement des visiteurs. Plus ça bouge, plus la musique se densifie.
 - La musique (Arthur, moteur Kikinator) est hors de ce projet. Ce projet ne fait que l'image.
 - Intention : l'image fait ce que fait le son. Le visiteur doit sentir une matière vivante qui l'écoute, pas une démo technique.
 
@@ -68,14 +68,15 @@ Tout arrive en OSC, port 7000 (à confirmer avec Arthur), valeurs de 0 à 1 :
 - Plus une entrée audio stéréo (mix d'Arthur) : niveau, graves, médiums, aigus, attaques.
 
 Règles :
-- Chaque zone correspond à une plage de x du bandeau, décrite dans `config.toml`.
+- Chaque zone correspond à une plage de x du bandeau, décrite dans `config.toml` (zone N = mur N).
 - Simulateur obligatoire : tant que les vraies entrées ne sont pas là, tout se pilote au clavier et avec `assets/test.wav`. Un réglage bascule du simulateur aux vraies entrées.
 - Toutes les entrées sont lissées (0,5 à 2 s). Rien ne saute.
 
 ## 8. Cards
 - Trois familles : notre tech, les neurosciences, les lieux (retail, spa, hôpital...). Textes dans `assets/cards/cards.json`.
 - Visuels : PNG transparents dessinés dans Figma à la taille réelle en pixels, dans `assets/cards/`. Changer un texte ne demande jamais de toucher au code.
-- Une card maximum par mur à la fois. 25 mots maximum. Corps 32 px minimum, titres 80 à 120 px, largeur 700 à 1000 px.
+- Chaque mur porte en permanence le titre de son atelier (il nomme la zone), plus une card explicative au plus à la fois (décidé le 23/09). Mur 4 : seulement 3,6 m libres en haut (porte), titre court.
+- 25 mots maximum par card. Corps 32 px minimum, titres 80 à 120 px, largeur 700 à 1000 px.
 - Moitié haute du bandeau. Jamais dans une zone morte, jamais à cheval sur deux murs.
 - La matière se condense pour former la card, puis elle se dissout. Durée 20 à 30 s. Derrière la card, densité de particules réduite d'environ 80 %.
 - Déclenchement par la présence dans la zone et par le déroulé, pas par un minuteur seul.
@@ -114,6 +115,6 @@ Calendrier indicatif : étape 1 les 21 et 22 septembre, étape 2 du 23 au 26, é
 ## 11. Questions encore ouvertes
 - Machine du show : PC RTX 3090 à confirmer (accès, dates, modèle exact de la carte). Secours : le MacBook, éventuellement à `scale` 0.5.
 - Largeur exacte attendue par MadMapper (14446 ou 14573), cadence NDI, créneau de test sur place.
-- Implantation exacte des 4 zones dans la salle.
+- Emplacement des webcams dans la salle (un atelier par mur est décidé).
 - Port et adresses OSC côté Arthur, et moyen de récupérer son mix audio.
 - Langue des cards (français, anglais, les deux).
