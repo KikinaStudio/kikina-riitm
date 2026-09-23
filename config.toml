@@ -35,12 +35,12 @@ repos_force = 0.08         # force de l'attraction vers cette hauteur
 repos_etalement = 0.35     # épaisseur de la nappe au repos (1 = tout le mur)
 turbulence_repos = 0.006   # vitesse des tourbillons au calme
 turbulence_eveil = 0.05    # vitesse des tourbillons à l'éveil maximal
-remous_force = 0.08        # remous fins et vifs à l'agitation maximale
-soulevement = 0.05         # vitesse de montée de la matière là où quelqu'un bouge
+remous_force = 0.16        # remous fins et vifs à l'agitation maximale
+soulevement = 0.14         # vitesse de montée de la matière là où quelqu'un bouge
 
 # L'agitation locale (à l'étape 3 : les webcams ; pour l'instant : la souris dans l'aperçu).
-agitation_rayon_px = 700   # rayon de l'agitation autour d'un visiteur
-agitation_montee_s = 0.6   # temps pour que l'agitation s'installe
+agitation_rayon_px = 900   # rayon de l'agitation autour d'un visiteur
+agitation_montee_s = 0.35  # temps pour que l'agitation s'installe
 agitation_retombee_s = 2.5 # temps pour qu'elle retombe
 
 

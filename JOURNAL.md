@@ -21,8 +21,10 @@ Retour de Jérémie sur la première version : "cheap", une variation de quantit
 - 30 i/s, rendu 10 à 13 ms sur le Mac (moins qu'avant : les grains éteints ne sont plus dessinés).
 - Captures : calme = nappe basse ; calme + souris = colonne soulevée à l'endroit du mouvement ; dense = tout le mur.
 
+### Étape 2 validée par Jérémie le 23 septembre 2026
+Après un premier test "réaction locale pas assez forte", renforcée à chaud : soulevement 0.14, remous_force 0.16, rayon 900 px, montée 0.35 s, et la matière s'éclaire davantage là où on bouge. Validé ensuite.
+
 ### Ce qui reste fragile
-- Jugé sur captures et par moi. Jérémie doit tester avec la souris, en mouvement.
 - Réglage des vitesses à affiner sur les vrais murs (une vitesse en px/s se juge à l'échelle 1 px = 3 mm).
 
 ### Comment relancer
@@ -31,6 +33,12 @@ cd "/Users/leon/RIITM final"
 .venv/bin/python kikina.py
 ```
 Puis bouger la souris sur une des 4 lignes de l'aperçu.
+
+### Prochaine session : étape 3, la réactivité
+- Simulateur clavier, entrée audio (`assets/test.wav`, pas encore fourni par Arthur), OSC port 7000, réaction par zone.
+- Jérémie veut une réaction "VJing" à la musique : attaques, graves, aigus depuis l'audio ; et par note si Arthur envoie ses notes en OSC (à lui demander : adresses, port, extrait audio).
+- Les zones écriront dans `self.excitation` (kikina.agiter) exactement comme la souris aujourd'hui.
+- Étape 1 bis sur le PC toujours à faire (Jérémie devait y avoir accès le 22/09).
 
 ---
 

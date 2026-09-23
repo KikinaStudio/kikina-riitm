@@ -28,7 +28,7 @@ void main() {
     vec2 u = vec2(e.x / aspect, e.y);
     float masse = mix(1.0, texture(champs, u).r, voile_contraste);
     float a = clamp(eveil + texture(excitation, u).r, 0.0, 1.0);
-    masse *= 0.75 + 0.5 * a;                                // la matière s'éclaire en s'agitant
+    masse *= 0.7 + 0.5 * a + 0.8 * texture(excitation, u).r;  // la matière s'éclaire en s'agitant, surtout localement
 
     // Beaucoup de grains fins et ternes, quelques rares gros et brillants.
     float h = hasard(id * 13U + 1U);
