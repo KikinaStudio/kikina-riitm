@@ -83,15 +83,16 @@ osc_port = 7000            # à confirmer avec Arthur
 volume_calme_db = -28      # volume mesuré qui vaut "calme" (lire la console)
 volume_dense_db = -14      # volume mesuré qui vaut "dense"
 maree_s = 2                # lissage de la marée (calme <-> dense)
-accents_s = 0.5            # lissage des graves et des aigus
+accents_s = 0.5            # lissage des graves et de la brillance
 graves_force = 0.15        # combien les graves font gonfler les masses (0 = coupé)
-aigus_force = 0.4          # combien les aigus font scintiller les grains fins (0 = coupé)
+brillance_force = 0.4      # combien un son clair fait scintiller les grains fins (0 = coupé)
+brillance_hz = [120, 300]  # brillance (lire la console) qui vaut "sombre", et "clair". Kikinator : 100 à 250 Hz
 notes_saut_db = 4          # une note doit dépasser de 4 dB ce qu'on entendait juste avant (plus haut = moins de notes)
 onde_vitesse = 0.35        # vitesse de l'anneau, en hauteurs de bandeau par seconde
 onde_duree_s = 3           # vie d'une onde
-onde_largeur = 0.05        # épaisseur du front, en hauteurs de bandeau
-onde_poussee = 0.25        # force avec laquelle le front pousse la matière (0 = coupé)
-onde_eclat = 0.6           # lumière en plus sur le front (0 = coupé)
+onde_largeur = 0.07        # épaisseur du front, en hauteurs de bandeau
+onde_poussee = 0.4         # force avec laquelle le front pousse la matière (0 = coupé)
+onde_eclat = 2.0           # lumière en plus sur le front (0 = coupé)
 octaves = [2.5, 5.5]       # octave qui va en bas du mur, octave qui va en haut (4 = do à 262 Hz)
 
 # Les zones : plage de x de chaque zone, en px sur la largeur de référence 14446.

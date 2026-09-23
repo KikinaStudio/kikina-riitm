@@ -20,7 +20,7 @@ La matière suit la musique (générée par une évolution du Kikinator d'Arthur
 |---|---|---|
 | Volume général | Marée : glisse entre les 3 réglages validés (calme 0, moyen 0,5, dense 1) | 2 s |
 | Graves | Les masses gonflent (le voile occupe plus de place) | 0,5 s |
-| Aigus | Les grains fins scintillent (frémissement de lumière, pas de clignotement) | 0,5 s |
+| Brillance (son clair) | Les grains fins scintillent (frémissement de lumière, pas de clignotement). Mesurée par la fréquence moyenne du son : le Kikinator n'a presque rien au-dessus de 2 kHz, une bande « aigus » ne mesurait que du bruit | 0,5 s |
 | Note (attaque) | Une **onde** (voir plus bas) | montée immédiate, vie 3 s |
 
 Si `/music/densite` arrive en OSC (reçu dans les 5 dernières secondes), il remplace le volume pour la marée.
@@ -53,9 +53,10 @@ Si `/music/densite` arrive en OSC (reçu dans les 5 dernières secondes), il rem
 - **Son**, dans le fil d'exécution de `sounddevice` (blocs de 1024 échantillons, environ 23 ms) :
   - simulateur : `test.wav` lu avec `wave` (bibliothèque standard), joué par une sortie `sounddevice`, chaque bloc analysé au moment où il part vers les haut-parleurs ;
   - réel : entrée `sounddevice` choisie par une partie de son nom (`audio_entree` dans la config) ; erreur claire listant les entrées disponibles si le nom ne correspond à rien.
-  - Analyse (mono) : volume RMS en dB ; graves (25 à 160 Hz) et aigus (2 à 8 kHz), chacun rapporté à son propre maximum récent qui redescend lentement (environ 20 s), donc 0 à 1 quel que soit le niveau d'entrée ; notes par flux spectral (hausse d'énergie d'un bloc au suivant) au-dessus d'un seuil adaptatif (`notes_seuil` fois la moyenne récente), 150 ms minimum entre deux notes, ignorées sous -60 dB (silence) ; hauteur = pic le plus fort entre 60 et 4000 Hz sur les 4096 derniers échantillons ; force = dépassement du seuil, ramené entre 0 et 1.
+  - Analyse (mono) : volume = énergie moyennée sur 1 s, en dB (une moyenne de dB serait tirée vers le bas par les silences entre les notes) ; graves (25 à 160 Hz) et aigus (2 à 8 kHz), chacun rapporté à son propre maximum récent qui redescend lentement (environ 20 s), donc 0 à 1 quel que soit le niveau d'entrée.
+  - Notes : une bande d'octave (6 bandes de 60 à 3840 Hz) dont le niveau dépasse de `notes_saut_db` (4 dB) son maximum des 0,6 s précédentes ; 150 ms minimum entre deux notes ; ignorées sous -60 dB. Choisi après mesure : le flux spectral prévu au départ prenait chaque ondulation d'une note tenue du Kikinator pour une note (33 détections pour 5 vraies notes en 20 s). Hauteur = pic le plus fort de ce qui est apparu depuis 3 blocs, entre 60 et 3840 Hz. Force = dépassement : une note qui sort du silence vaut 1, une note noyée dans un passage dense environ 0,35.
   - Les notes passent au programme principal par une file (`collections.deque`).
-- **OSC** : serveur `python-osc` dans un fil à part, port `osc_port` (7000). Adresses `/zone/N/presence`, `/zone/N/energie` (N de 1 à 4), `/music/densite`, valeurs 0 à 1 bornées. Les autres adresses sont ignorées.
+- **OSC** : serveur `python-osc` dans un fil à part, port `osc_port` (7000). Adresses `/zone/N/presence`, `/zone/N/energie` (N de 1 à 4), `/music/densite`, valeurs 0 à 1 bornées. Les autres adresses sont ignorées. Une zone muette depuis 3 s retombe à 0 (capteur arrêté).
 - **Lissage** : fait dans le programme principal, à chaque image, par `valeur += (cible - valeur) * (1 - exp(-dt / durée))`.
 - `python entrees.py` : autotest (analyse `test.wav` hors temps réel, vérifie qu'on trouve des notes et que le volume est plus fort dans la partie dense que dans la partie calme ; s'envoie un message OSC et vérifie qu'il arrive).
 
@@ -73,14 +74,15 @@ Si `/music/densite` arrive en OSC (reçu dans les 5 dernières secondes), il rem
 
 ### `config.toml`
 - `[entrees]` : `simulateur`, `son_test`, `audio_entree`, `osc_port`.
-- `[musique]` : `volume_calme_db`, `volume_dense_db`, `maree_s`, `accents_s`, `graves_force`, `aigus_force`, `notes_seuil`, `onde_vitesse`, `onde_duree_s`, `onde_poussee`, `onde_eclat`, `octaves` (plage grave, aigu).
+- `[musique]` : `volume_calme_db`, `volume_dense_db`, `maree_s`, `accents_s`, `graves_force`, `brillance_force`, `brillance_hz`, `notes_saut_db`, `onde_vitesse`, `onde_largeur`, `onde_duree_s`, `onde_poussee`, `onde_eclat`, `octaves` (plage grave, aigu).
 - `[zones]` : plage x de chaque zone (en px à la largeur de référence 14446, mise à l'échelle comme les murs), `presence_force`.
 - Tout se recharge à chaud, sauf le mode, l'entrée audio et le port (relancer).
 
 ### Le reste
 - `requirements.txt` : `sounddevice`, `python-osc`, versions figées.
 - `README.md` : Windows, autoriser le port UDP 7000 dans le pare-feu ; macOS, autoriser le micro au Terminal en mode réel ; comment choisir l'entrée audio.
-- `test.wav` : fabriqué par un script à part (pedalboard dans un environnement temporaire, pas dans le projet), 44,1 kHz stéréo 16 bits. Le journal note les réglages utilisés pour pouvoir le refaire.
+- `test.wav` : fabriqué par `outils/fabriquer_test_wav.py` (pedalboard dans un environnement à part, pas dans le projet), 44,1 kHz stéréo 16 bits. Le Kikinator ne joue pas plus fort quand il est dense : le script simule un mix qui enfle (calme 12 dB plus bas).
+- `simulation.frag` : le soulèvement local vise une hauteur propre à chaque grain (sinon, une zone agitée longtemps entasse la matière en un trait clair en haut du mur).
 
 ## Vérification
 - `python entrees.py` passe.

@@ -4,6 +4,49 @@
 
 ---
 
+## 23 septembre 2026 - Étape 3 : la réactivité (à valider par Jérémie)
+
+Conception : `docs/superpowers/specs/2026-09-23-etape3-reactivite-design.md`. Plan : `docs/superpowers/plans/2026-09-23-etape3-reactivite.md`.
+
+### Ce qui a été fait
+- `entrees.py` (nouveau) : écoute le son (`assets/test.wav` en boucle dans le simulateur, ou une entrée audio choisie par son nom) et l'OSC sur le port 7000 (`/zone/N/presence`, `/zone/N/energie`, `/music/densite`). `python entrees.py` = autotest.
+- La musique agit sur tout le bandeau :
+  - **marée** : le volume fait glisser entre calme, moyen et dense (lissé 2 s) ; si Arthur envoie `/music/densite`, elle prend le relais ;
+  - **graves** : les masses gonflent ;
+  - **brillance** (son clair) : les grains fins frémissent ;
+  - **chaque note** : un anneau lumineux part d'un point et s'élargit pendant 3 s en poussant la matière. Il naît là où les visiteurs agitent la matière (n'importe où s'il n'y a personne), à la hauteur de la note (grave en bas, aigu en haut).
+- Les zones (par défaut zone N = mur N) : présence = légère agitation, mouvement = agitation pleine. Une zone muette depuis 3 s retombe à 0 (capteur arrêté).
+- Touches : A Z E R maintenues (zone 1 à 4 bouge), Maj + A Z E R (présence immobile), C M D (forcer), S (la musique reprend la main). Options de test `--zone N`, `--note`.
+- `assets/test.wav` : 3 min du vrai plugin Kikinator (calme, dense, calme), fabriqué par `outils/fabriquer_test_wav.py` (pedalboard dans un environnement à part : `python3.11 -m venv /tmp/pb && /tmp/pb/bin/pip install pedalboard numpy`, puis `/tmp/pb/bin/python outils/fabriquer_test_wav.py`).
+- Correction de l'étape 2 : là où ça s'agite, chaque grain vise sa propre hauteur (avant, une zone agitée longtemps entassait la matière en un trait clair en haut du mur).
+
+### Ce qui marche (mesuré sur le Mac, secteur)
+- Test complet de 3 min : 30 i/s tenus (jamais sous 29,5), rendu 12 ms en moyenne, 15 ms au pire (budget 33 ms). Les ondes ne coûtent rien de visible.
+- Marée : 0,1 au calme, 1,0 dans la partie dense, redescend à 0,05 à la fin.
+- Notes : au calme, les 5 vraies notes par 20 s sont trouvées, force maximale, aucune fausse ; au dense, une note toutes les 2 s environ ressort. 73 notes en 3 min.
+- OSC : un message `/zone/3/energie` envoyé au moteur qui tourne agite bien la zone 3.
+
+### À dire à Arthur (constaté sur le Kikinator 1.2.0)
+- Baisser `crew` (nombre de voix) n'arrête pas les voix déjà lancées : après un passage dense, la musique ne redevient jamais calme. Au show, elle doit pouvoir se reposer quand les gens s'immobilisent.
+- Il ne joue pas plus fort quand il est dense (-15 dB au calme, -13,5 dB au dense). L'image suit le volume : il faut soit un mix qui enfle avec la densité, soit qu'il envoie `/music/densite` en OSC (port 7000, 0 à 1). Le son de test simule un mix qui enfle (calme 12 dB plus bas).
+- Il n'a presque rien au-dessus de 2 kHz : on mesure donc la brillance (fréquence moyenne, 100 à 250 Hz sur le Kikinator) plutôt que les aigus.
+- À lui demander : l'extrait de son vrai mix, le port et les adresses OSC s'il en envoie.
+
+### Ce qui reste fragile
+- Les réglages de volume (`volume_calme_db`, `volume_dense_db`) et de brillance (`brillance_hz`) sont calés sur `test.wav`. À refaire sur le vrai mix d'Arthur en lisant la console.
+- Les ondes et le scintillement sont jugés sur captures, pas encore en mouvement ni dans NDI Video Monitor par Jérémie.
+- Deux Kikina lancés en même temps : le second plante (deux sources NDI `KIKINA`). Toujours fermer l'ancien avant de relancer.
+- Étape 1 bis (PC du show) toujours pas faite.
+
+### Comment relancer
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/pip install -r requirements.txt     # une fois : sounddevice et python-osc sont nouveaux
+.venv/bin/python kikina.py
+```
+
+---
+
 ## 23 septembre 2026 - Étape 2, deuxième version : repos et agitation
 
 Retour de Jérémie sur la première version : "cheap", une variation de quantité de grains ne se lit pas comme une réaction. Il veut un changement de comportement, plus visible.

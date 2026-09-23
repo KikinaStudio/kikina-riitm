@@ -1,9 +1,14 @@
-"""Kikina @ RIITM : moteur visuel. Étape 2 : la matière.
+"""Kikina @ RIITM : moteur visuel. Étape 3 : la réactivité.
 
     python kikina.py                  # fenêtre d'aperçu + envoi NDI "KIKINA"
     python kikina.py --secondes 20    # s'arrête seul et enregistre une capture (pour les tests)
+    python kikina.py --zone 2         # la zone 2 reste agitée (tests sans clavier)
+    python kikina.py --note           # une note forte toutes les 4 s (tests sans le son)
 
-Touches dans la fenêtre : C calme, M moyen, D dense, P capture PNG, Échap quitter.
+Touches dans la fenêtre :
+    A Z E R maintenues : quelqu'un bouge dans la zone 1, 2, 3, 4 ; Maj + A Z E R : présence immobile
+    C calme, M moyen, D dense (forcés) ; S la marée suit la musique
+    P capture PNG, Échap quitter
 Bouger la souris dans l'aperçu simule un visiteur qui bouge à cet endroit du mur.
 Les fichiers de shaders/ et config.toml sont rechargés dès qu'on les enregistre.
 """
@@ -11,6 +16,7 @@ import math
 import re
 import time
 import tomllib
+from collections import deque
 from fractions import Fraction
 from pathlib import Path
 
@@ -22,6 +28,8 @@ from cyndilib.sender import Sender
 from cyndilib.video_frame import VideoSendFrame
 from cyndilib.wrapper.ndi_structs import FourCC
 from PIL import Image
+
+from entrees import Entrees
 
 ICI = Path(__file__).parent
 SHADERS = ICI / "shaders"
@@ -50,7 +58,21 @@ def lire_shader(nom):
 def regler(prog, **valeurs):
     for nom, v in valeurs.items():
         if nom in prog:  # un uniform inutilisé est supprimé par le compilateur
-            prog[nom].value = v
+            if isinstance(v, np.ndarray):
+                prog[nom].write(v.tobytes())
+            else:
+                prog[nom].value = v
+
+
+def lissage(dt, duree):
+    """Part du chemin à faire en une image pour atteindre 95 % en `duree` secondes."""
+    return 1 - math.exp(-dt * 3 / max(duree, 0.01))
+
+
+def profil_zone(x, a, b, bord=300 / LARGEUR_REF):
+    """1 dans la zone [a, b] (fractions du bandeau), 0 dehors, bords adoucis ; le bandeau boucle en x."""
+    return np.max([np.clip((xx - a) / bord + 0.5, 0, 1) * np.clip((b - xx) / bord + 0.5, 0, 1)
+                   for xx in (x - 1, x, x + 1)], axis=0)
 
 
 class Kikina(mglw.WindowConfig):
@@ -64,8 +86,10 @@ class Kikina(mglw.WindowConfig):
     @classmethod
     def add_arguments(cls, parser):
         parser.add_argument("--secondes", type=float, default=0, help="s'arrête seul après N secondes")
-        parser.add_argument("--reglage", choices=REGLAGES, help="réglage de départ (sinon celui de config.toml)")
+        parser.add_argument("--reglage", choices=REGLAGES + ("musique",), help="réglage de départ (sinon celui de config.toml)")
         parser.add_argument("--agiter", action="store_true", help="simule un visiteur qui tourne en rond sur le mur 1")
+        parser.add_argument("--zone", type=int, choices=range(1, 5), help="la zone N reste agitée")
+        parser.add_argument("--note", action="store_true", help="une note forte toutes les 4 s")
 
     def __init__(self, **kw):
         super().__init__(**kw)
@@ -123,7 +147,7 @@ class Kikina(mglw.WindowConfig):
             raise SystemExit("Un shader ne compile pas, voir l'erreur ci-dessus.")
 
         self.cible = self.argv.reglage or m["reglage_depart"]
-        self.params = dict(m[self.cible])
+        self.params = dict(m["calme" if self.cible == "musique" else self.cible])
         self.temps = 0.0
         self.n = 0
 
@@ -135,8 +159,18 @@ class Kikina(mglw.WindowConfig):
         self.sender.set_video_frame(vf)
         self.sender.open()
 
+        self.entrees = Entrees(self.cfg)
+        self.lisse = {}                    # valeurs lissées (voir suivre)
+        self.sim_bouge = [0.0] * 4         # touches A Z E R maintenues
+        self.sim_presence = [0.0] * 4      # Maj + A Z E R
+        if self.argv.zone:
+            self.sim_bouge[self.argv.zone - 1] = 1.0
+        self.ondes = deque(maxlen=8)       # [x, y, âge (s), force]
+        self.rng = np.random.default_rng()
+        self.notes_vues = 0
+
         print(f"{self.nombre} particules, sortie {self.w} x {self.h} px, NDI '{sortie['nom_ndi']}'")
-        print("Touches : C calme, M moyen, D dense, P capture, Échap quitter. La souris agite la matière.\n")
+        print("Touches : A Z E R zones (Maj = présence), C M D forcer, S musique, P capture, Échap quitter.\n")
         self.moi = psutil.Process()
         self.moi.cpu_percent()
         self.debut = self.prochaine = self.t_stats = self.t_verif = time.perf_counter()
@@ -169,24 +203,39 @@ class Kikina(mglw.WindowConfig):
     def image_suivante(self):
         t0 = time.perf_counter()
         dt = 1 / self.fps  # pas fixe : le rendu est identique d'une machine à l'autre
-        m = self.cfg["matiere"]
-        k = 1 - math.exp(-dt * 3 / max(m["transition_s"], 0.1))  # lissage : rien ne saute
-        for nom, v in m[self.cible].items():
+        m, mus = self.cfg["matiere"], self.cfg["musique"]
+        son = self.entrees.analyse
+        son.saut_db = mus["notes_saut_db"]  # à chaud
+        if self.cible == "musique":  # la marée : le volume (ou la densité envoyée par Arthur) choisit le réglage
+            d = self.entrees.densite()
+            n = d if d is not None else (son.volume_db - mus["volume_calme_db"]) / (mus["volume_dense_db"] - mus["volume_calme_db"])
+            cible, duree = self.melange(min(1.0, max(0.0, n))), mus["maree_s"]
+        else:
+            cible, duree = m[self.cible], m["transition_s"]
+        k = lissage(dt, duree)  # rien ne saute
+        for nom, v in cible.items():
             self.params[nom] = self.params.get(nom, v) + (v - self.params.get(nom, v)) * k
         p = self.params
+        graves = self.suivre("graves", son.graves, mus["accents_s"], dt)
+        bas, haut = mus["brillance_hz"]  # la brillance du son, ramenée entre 0 (sombre) et 1 (clair)
+        clair = min(1.0, max(0.0, math.log(max(son.brillance, 1.0) / bas) / math.log(haut / bas)))
+        brillance = self.suivre("brillance", clair if son.brillance else 0.0, mus["accents_s"], dt)
         self.temps += dt
         self.n += 1
+        self.agiter(m, dt)
         commun = dict(
             aspect=self.aspect, temps=self.temps, echelle=self.scale,
             courant_echelle=m["courant_echelle"], courant_evolution=m["courant_evolution"],
+            ondes=self.ondes_suivantes(mus, dt), onde_vitesse=mus["onde_vitesse"],
+            onde_duree=mus["onde_duree_s"], onde_largeur=mus["onde_largeur"],
         )
 
         self.champs_fbo.use()
         regler(self.progs["champs"], voile_echelle=m["voile_echelle"], voile_vitesse=m["voile_vitesse"],
-               voile_filaments=p["voile_filaments"], voile_plein=p["voile_plein"], **commun)
+               voile_filaments=p["voile_filaments"], voile_plein=min(1.0, p["voile_plein"] + graves * mus["graves_force"]),
+               **commun)
         self.vaos["champs"].render(moderngl.TRIANGLE_STRIP)
 
-        self.agiter(m, dt)
         (lue, _), (_, ecrite_fbo) = self.etats
         ecrite_fbo.use()
         lue.use(0)
@@ -194,7 +243,7 @@ class Kikina(mglw.WindowConfig):
         self.remous.use(2)
         self.excitation_tex.use(3)
         regler(self.progs["simulation"], etat=0, champs=1, remous=2, excitation=3, dt=dt, image=self.n,
-               eveil=p["eveil"], vie=tuple(m["vie_s"]),
+               eveil=p["eveil"], vie=tuple(m["vie_s"]), onde_poussee=mus["onde_poussee"],
                **{k: m[k] for k in ("repos_hauteur", "repos_force", "repos_etalement", "turbulence_repos", "turbulence_eveil",
                                     "remous_force", "soulevement")}, **commun)
         self.vaos["simulation"].render(moderngl.TRIANGLE_STRIP)
@@ -209,7 +258,8 @@ class Kikina(mglw.WindowConfig):
         self.excitation_tex.use(3)
         regler(self.progs["particules"], etat=0, champs=1, excitation=3, nombre=float(self.nombre),
                densite=m["densite"], eveil=p["eveil"], taille=m["taille_px"],
-               voile_contraste=p["voile_contraste"], **commun)
+               voile_contraste=p["voile_contraste"], onde_eclat=mus["onde_eclat"],
+               scintille=brillance * mus["brillance_force"], **commun)
         allumees = min(self.nombre, int(self.nombre * (m["densite"] + 0.05)) + 1)
         self.vaos["particules"].render(moderngl.POINTS, vertices=allumees)
         self.ctx.disable(moderngl.BLEND)
@@ -249,7 +299,62 @@ class Kikina(mglw.WindowConfig):
             tache = np.exp(-d2 * 3) * min(self.souris_energie, 1.0) * (dt / m["agitation_montee_s"])
             ex[np.ix_(ys, xs)] = np.minimum(1.0, ex[np.ix_(ys, xs)] + tache)
             self.souris_energie = 0.0
+
+        # Les zones : l'énergie (les gens bougent) s'accumule comme la souris ; la présence (quelqu'un
+        # est là, immobile) maintient une légère agitation. Vraies entrées et clavier s'additionnent.
+        z, E = self.cfg["zones"], self.entrees
+        x = (np.arange(ex.shape[1]) + 0.5) / ex.shape[1]
+        apport, plancher = np.zeros_like(x), np.zeros_like(x)
+        for i, (a, b) in enumerate(z["plages"]):
+            profil = profil_zone(x, a / LARGEUR_REF, b / LARGEUR_REF)
+            presence = self.suivre(f"presence{i}", max(E.zone("presence", i), self.sim_presence[i], self.sim_bouge[i]),
+                                   z["presence_s"], dt)
+            apport += max(E.zone("energie", i), self.sim_bouge[i]) * profil
+            plancher = np.maximum(plancher, presence * z["presence_force"] * profil)
+        ex += (apport * (dt / m["agitation_montee_s"])).astype("f4")
+        np.maximum(ex, plancher.astype("f4"), out=ex)
+        np.minimum(ex, 1.0, out=ex)
         self.excitation_tex.write(ex.tobytes())
+
+    # --- musique ---------------------------------------------------------------
+    def suivre(self, nom, cible, duree, dt):
+        """Lissage d'une entrée : rien ne saute."""
+        v = self.lisse.get(nom, cible)
+        v += (cible - v) * lissage(dt, duree)
+        self.lisse[nom] = v
+        return v
+
+    def melange(self, n):
+        """Niveau 0 à 1 -> réglages de matière : 0 calme, 0,5 moyen, 1 dense."""
+        m = self.cfg["matiere"]
+        a, b, t = ("calme", "moyen", n * 2) if n < 0.5 else ("moyen", "dense", n * 2 - 1)
+        return {k: m[a][k] + (m[b][k] - m[a][k]) * t for k in m[a]}
+
+    def ondes_suivantes(self, mus, dt):
+        """Vieillit les ondes, en fait naître une par note entendue, renvoie le tableau pour les shaders."""
+        if self.argv.note and int(self.temps / 4) != int((self.temps - dt) / 4):
+            self.entrees.analyse.notes.append((1.0, 262.0))
+        for o in self.ondes:
+            o[2] += dt
+        while self.ondes and self.ondes[0][2] > mus["onde_duree_s"]:
+            self.ondes.popleft()
+        notes = self.entrees.analyse.notes
+        while notes:
+            force, freq = notes.popleft()
+            self.notes_vues += 1
+            col = self.excitation.max(axis=0)
+            if col.max() > 0.05:  # là où ça bouge : tirage au hasard pondéré par l'agitation
+                poids = col.astype("f8") ** 2
+                x = (self.rng.choice(len(col), p=poids / poids.sum()) + self.rng.random()) / len(col)
+            else:                 # personne : n'importe où
+                x = self.rng.random()
+            bas, haut = mus["octaves"]
+            y = 1 - (math.log2(max(freq, 1.0) / 16.35) - bas) / (haut - bas)  # grave en bas, aigu en haut
+            self.ondes.append([x * self.aspect, min(0.92, max(0.08, y)), 0.0, force])
+        tableau = np.zeros((8, 4), dtype="f4")
+        if self.ondes:
+            tableau[:len(self.ondes)] = self.ondes
+        return tableau
 
     def on_mouse_position_event(self, x, y, dx, dy):
         """La souris dans l'aperçu = un visiteur qui bouge sur le mur correspondant."""
@@ -287,6 +392,10 @@ class Kikina(mglw.WindowConfig):
             print(f"{(maintenant - self.debut) / 60:5.1f} min | {self.cible:5} | {ips:5.1f} i/s | rendu {r:5.1f} ms | "
                   f"relecture {l:4.1f} ms | envoi NDI {e:4.1f} ms | CPU programme {self.moi.cpu_percent():4.0f} % | "
                   f"récepteurs NDI : {self.sender.get_num_connections(0)}", flush=True)
+            E, a = self.entrees, self.entrees.analyse
+            zones = " ".join(f"{max(E.zone('energie', i), self.sim_bouge[i]):.1f}" for i in range(4))
+            print(f"        son {a.volume_db:6.1f} dB | marée {self.params['eveil']:.2f} | graves {self.lisse.get('graves', 0):.2f} | "
+                  f"brillance {a.brillance:4.0f} Hz ({self.lisse.get('brillance', 0):.2f}) | notes {self.notes_vues} | zones {zones}", flush=True)
             self.wnd.title = f"Kikina | {self.cible} | {ips:.1f} i/s"
             self.mesures.clear()
             self.t_stats = maintenant
@@ -302,16 +411,29 @@ class Kikina(mglw.WindowConfig):
         print(f"capture : {chemin}")
 
     def on_key_event(self, key, action, modifiers):
-        if action != self.wnd.keys.ACTION_PRESS:
+        k = self.wnd.keys
+        zones = {k.A: 0, k.Z: 1, k.E: 2, k.R: 3}
+        if key in zones:  # A Z E R : quelqu'un bouge dans la zone ; avec Maj : présence immobile
+            i = zones[key]
+            if action == k.ACTION_PRESS and modifiers.shift:
+                self.sim_presence[i] = 1.0 - self.sim_presence[i]
+                print(f"zone {i + 1} : présence {'oui' if self.sim_presence[i] else 'non'}")
+            elif action == k.ACTION_PRESS:
+                self.sim_bouge[i] = 1.0
+            elif action == k.ACTION_RELEASE:
+                self.sim_bouge[i] = 0.0
             return
-        touches = {self.wnd.keys.C: "calme", self.wnd.keys.M: "moyen", self.wnd.keys.D: "dense"}
+        if action != k.ACTION_PRESS:
+            return
+        touches = {k.C: "calme", k.M: "moyen", k.D: "dense", k.S: "musique"}
         if key in touches:
             self.cible = touches[key]
             print(f"-> {self.cible}")
-        elif key == self.wnd.keys.P:
+        elif key == k.P:
             self.capture()
 
     def on_close(self):
+        self.entrees.fermer()
         self.sender.close()
 
 

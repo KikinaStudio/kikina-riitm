@@ -23,6 +23,7 @@ uniform float turbulence_eveil;  // ... à l'éveil maximal
 uniform float remous_force;      // vitesse des remous à l'agitation maximale
 uniform float soulevement;       // vitesse de montée là où ça s'agite
 uniform vec2 vie;                // durée de vie mini et maxi (s)
+uniform float onde_poussee;      // vitesse donnée par le front d'une note
 out vec4 sortie;
 
 void main() {
@@ -39,7 +40,12 @@ void main() {
     v += texture(remous, u).rg * remous_force * a * a;
     float mienne = repos_hauteur + (hasard(id * 19U + 2U) - 0.5) * repos_etalement;  // chaque grain a sa hauteur de repos
     v.y += (mix(mienne, 0.5, a) - e.y) * repos_force * (1.0 - 0.8 * a);
-    v.y -= soulevement * local * (0.5 + hasard(id * 11U + 9U)) * smoothstep(0.0, 0.35, e.y);
+    // là où ça s'agite, chaque grain s'envole vers sa propre hauteur : la matière emplit le mur sans s'entasser en haut
+    float envol = 0.1 + 0.8 * hasard(id * 11U + 9U);
+    v.y += (envol - e.y) * soulevement * 2.0 * local;
+    vec2 pousse;
+    fronts(e.xy, pousse);
+    v += pousse * onde_poussee;                          // le front d'une note pousse la matière
     // les bords freinent : la matière ne s'entasse ni en haut ni en bas
     v.y *= mix(smoothstep(0.0, 0.08, e.y), smoothstep(1.0, 0.92, e.y), step(0.0, v.y));
     e.xy += v * allure * dt;

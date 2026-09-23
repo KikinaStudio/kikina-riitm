@@ -49,11 +49,11 @@ Mesuré sur le vrai Kikinator : le flux spectral prend les ondulations d'une not
 
 **Files:** Modify `config.toml`
 
-- [ ] **Step 1 :** dans `[matiere]`, remplacer la ligne `reglage_depart` par :
+- [x] **Step 1 :** dans `[matiere]`, remplacer la ligne `reglage_depart` par :
 ```toml
 reglage_depart = "musique" # musique (la marée suit le son), calme, moyen ou dense
 ```
-- [ ] **Step 2 :** dans `[musique]`, remplacer `octaves = [2, 7]` par (les notes du Kikinator tombent entre 90 et 260 Hz) :
+- [x] **Step 2 :** dans `[musique]`, remplacer `octaves = [2, 7]` par (les notes du Kikinator tombent entre 90 et 260 Hz) :
 ```toml
 octaves = [2.5, 5.5]       # octave qui va en bas du mur, octave qui va en haut (4 = do à 262 Hz)
 ```
@@ -62,7 +62,7 @@ octaves = [2.5, 5.5]       # octave qui va en bas du mur, octave qui va en haut 
 
 **Files:** Modify `kikina.py`
 
-- [ ] **Step 1 :** imports et fonctions en haut du fichier :
+- [x] **Step 1 :** imports et fonctions en haut du fichier :
 ```python
 from collections import deque
 from entrees import Entrees
@@ -80,7 +80,7 @@ def regler(prog, **valeurs):
             else:
                 prog[nom].value = v
 ```
-- [ ] **Step 2 :** `--reglage` accepte `musique` (`choices=REGLAGES + ("musique",)`). Dans `__init__` : `self.params = dict(m["calme" if self.cible == "musique" else self.cible])`, puis après l'ouverture NDI :
+- [x] **Step 2 :** `--reglage` accepte `musique` (`choices=REGLAGES + ("musique",)`). Dans `__init__` : `self.params = dict(m["calme" if self.cible == "musique" else self.cible])`, puis après l'ouverture NDI :
 ```python
         self.entrees = Entrees(self.cfg)
         self.lisse = {}                    # valeurs lissées (voir suivre)
@@ -90,7 +90,7 @@ def regler(prog, **valeurs):
         self.rng = np.random.default_rng()
         self.notes_vues = 0
 ```
-- [ ] **Step 3 :** méthodes :
+- [x] **Step 3 :** méthodes :
 ```python
     def suivre(self, nom, cible, duree, dt):
         """Lissage d'une entrée : rien ne saute."""
@@ -105,7 +105,7 @@ def regler(prog, **valeurs):
         a, b, t = ("calme", "moyen", n * 2) if n < 0.5 else ("moyen", "dense", n * 2 - 1)
         return {k: m[a][k] + (m[b][k] - m[a][k]) * t for k in m[a]}
 ```
-- [ ] **Step 4 :** début de `image_suivante`, remplace le lissage des réglages :
+- [x] **Step 4 :** début de `image_suivante`, remplace le lissage des réglages :
 ```python
         m, mus = self.cfg["matiere"], self.cfg["musique"]
         son = self.entrees.analyse
@@ -124,22 +124,22 @@ def regler(prog, **valeurs):
         aigus = self.suivre("aigus", son.aigus, mus["accents_s"], dt)
 ```
 et dans l'appel `champs` : `voile_plein=min(1.0, p["voile_plein"] + graves * mus["graves_force"])` ; dans l'appel `particules` : `scintille=aigus * mus["aigus_force"]`.
-- [ ] **Step 5 :** touche S : `touches = {..., self.wnd.keys.S: "musique"}`.
-- [ ] **Step 6 :** `on_close` : `self.entrees.fermer()`.
-- [ ] **Step 7 :** lancer `.venv/bin/python kikina.py --secondes 60` : le son sort des haut-parleurs, pas d'erreur, `rechargé` absent, i/s ≈ 30.
+- [x] **Step 5 :** touche S : `touches = {..., self.wnd.keys.S: "musique"}`.
+- [x] **Step 6 :** `on_close` : `self.entrees.fermer()`.
+- [x] **Step 7 :** lancer `.venv/bin/python kikina.py --secondes 60` : le son sort des haut-parleurs, pas d'erreur, `rechargé` absent, i/s ≈ 30.
 
 ### Task 5 : Zones et touches
 
 **Files:** Modify `kikina.py`
 
-- [ ] **Step 1 :** fonction de module :
+- [x] **Step 1 :** fonction de module :
 ```python
 def profil_zone(x, a, b, bord=300 / LARGEUR_REF):
     """1 dans la zone [a, b] (fractions du bandeau), 0 dehors, bords adoucis ; le bandeau boucle en x."""
     return np.max([np.clip((xx - a) / bord + 0.5, 0, 1) * np.clip((b - xx) / bord + 0.5, 0, 1)
                    for xx in (x - 1, x, x + 1)], axis=0)
 ```
-- [ ] **Step 2 :** dans `agiter`, avant `self.excitation_tex.write(...)` :
+- [x] **Step 2 :** dans `agiter`, avant `self.excitation_tex.write(...)` :
 ```python
         z, E = self.cfg["zones"], self.entrees
         x = (np.arange(ex.shape[1]) + 0.5) / ex.shape[1]
@@ -154,7 +154,7 @@ def profil_zone(x, a, b, bord=300 / LARGEUR_REF):
         np.maximum(ex, plancher.astype("f4"), out=ex)
         np.minimum(ex, 1.0, out=ex)
 ```
-- [ ] **Step 3 :** `on_key_event` :
+- [x] **Step 3 :** `on_key_event` :
 ```python
     def on_key_event(self, key, action, modifiers):
         k = self.wnd.keys
@@ -178,14 +178,14 @@ def profil_zone(x, a, b, bord=300 / LARGEUR_REF):
         elif key == k.P:
             self.capture()
 ```
-- [ ] **Step 4 :** option de test `--zone N` (maintient la zone N agitée, comme `--agiter`) : `parser.add_argument("--zone", type=int, choices=range(1, 5))`, et dans `__init__` : `if self.argv.zone: self.sim_bouge[self.argv.zone - 1] = 1.0`.
-- [ ] **Step 5 :** `.venv/bin/python kikina.py --zone 2 --reglage calme --secondes 12` → capture : matière soulevée et éclairée sur le mur 2 seulement (x 5186 à 7321), transitions douces aux bords.
+- [x] **Step 4 :** option de test `--zone N` (maintient la zone N agitée, comme `--agiter`) : `parser.add_argument("--zone", type=int, choices=range(1, 5))`, et dans `__init__` : `if self.argv.zone: self.sim_bouge[self.argv.zone - 1] = 1.0`.
+- [x] **Step 5 :** `.venv/bin/python kikina.py --zone 2 --reglage calme --secondes 12` → capture : matière soulevée et éclairée sur le mur 2 seulement (x 5186 à 7321), transitions douces aux bords.
 
 ### Task 6 : Les ondes
 
 **Files:** Modify `shaders/commun.glsl`, `shaders/simulation.frag`, `shaders/particules.vert`, `kikina.py`
 
-- [ ] **Step 1 :** fin de `commun.glsl` :
+- [x] **Step 1 :** fin de `commun.glsl` :
 ```glsl
 // Les ondes des notes : anneaux qui partent d'un point et s'élargissent.
 // Chaque onde : x, y (mêmes unités que les particules), âge (s), force (0 = éteinte).
@@ -213,20 +213,20 @@ float fronts(vec2 p, out vec2 dir) {
     return s;
 }
 ```
-- [ ] **Step 2 :** `simulation.frag` : `uniform float onde_poussee;` et, juste avant la ligne `// les bords freinent` :
+- [x] **Step 2 :** `simulation.frag` : `uniform float onde_poussee;` et, juste avant la ligne `// les bords freinent` :
 ```glsl
     vec2 pousse;
     fronts(e.xy, pousse);
     v += pousse * onde_poussee;                          // le front d'une note pousse la matière
 ```
-- [ ] **Step 3 :** `particules.vert` : `uniform float onde_eclat; uniform float scintille;` et, avant `gl_PointSize` :
+- [x] **Step 3 :** `particules.vert` : `uniform float onde_eclat; uniform float scintille;` et, avant `gl_PointSize` :
 ```glsl
     vec2 inutile;
     lumiere *= 1.0 + onde_eclat * min(fronts(e.xy, inutile), 1.5);  // le front d'une note s'éclaire
     // les aigus : les grains fins frémissent, chacun à son rythme (3 à 7 fois par seconde)
     lumiere *= 1.0 + scintille * (1.0 - gros) * sin(6.2832 * (temps * (3.0 + 4.0 * hasard(id * 23U + 7U)) + hasard(id * 29U + 3U)));
 ```
-- [ ] **Step 4 :** `kikina.py`, méthode :
+- [x] **Step 4 :** `kikina.py`, méthode :
 ```python
     def ondes_suivantes(self, mus, dt):
         """Vieillit les ondes, en fait naître une par note entendue, renvoie le tableau pour les shaders."""
@@ -253,30 +253,30 @@ float fronts(vec2 p, out vec2 dir) {
         return tableau
 ```
 et dans `image_suivante`, après `self.agiter(m, dt)` : `ondes = self.ondes_suivantes(mus, dt)`, puis ajouter à `commun` : `ondes=ondes, onde_vitesse=mus["onde_vitesse"], onde_duree=mus["onde_duree_s"], onde_largeur=mus["onde_largeur"]` (déplacer la création de `commun` après ce calcul) ; `onde_poussee=mus["onde_poussee"]` dans l'appel simulation ; `onde_eclat=mus["onde_eclat"]` dans l'appel particules.
-- [ ] **Step 5 :** option de test `--note` : fait naître une onde forte toutes les 4 s (sans le son) : `parser.add_argument("--note", action="store_true")` et en tête de `ondes_suivantes` : `if self.argv.note and int(self.temps / 4) != int((self.temps - dt) / 4): self.entrees.analyse.notes.append((1.0, 262.0))`.
-- [ ] **Step 6 :** `.venv/bin/python kikina.py --note --reglage calme --secondes 5.5` → capture 1,5 s après une note : un anneau lumineux visible. Puis `--zone 1 --note` : les anneaux naissent sur le mur 1.
+- [x] **Step 5 :** option de test `--note` : fait naître une onde forte toutes les 4 s (sans le son) : `parser.add_argument("--note", action="store_true")` et en tête de `ondes_suivantes` : `if self.argv.note and int(self.temps / 4) != int((self.temps - dt) / 4): self.entrees.analyse.notes.append((1.0, 262.0))`.
+- [x] **Step 6 :** `.venv/bin/python kikina.py --note --reglage calme --secondes 5.5` → capture 1,5 s après une note : un anneau lumineux visible. Puis `--zone 1 --note` : les anneaux naissent sur le mur 1.
 
 ### Task 7 : Console
 
 **Files:** Modify `kikina.py`
 
-- [ ] **Step 1 :** dans `on_render`, après la ligne de performances :
+- [x] **Step 1 :** dans `on_render`, après la ligne de performances :
 ```python
             E, a = self.entrees, self.entrees.analyse
             zones = " ".join(f"{max(E.energie[i], self.sim_bouge[i]):.1f}" for i in range(4))
             print(f"        son {a.volume_db:6.1f} dB | marée {self.params['eveil']:.2f} | graves {self.lisse.get('graves', 0):.2f} | "
                   f"aigus {self.lisse.get('aigus', 0):.2f} | notes {self.notes_vues} | zones {zones}", flush=True)
 ```
-- [ ] **Step 2 :** docstring du fichier : ajouter les touches A Z E R, Maj, S et les options `--zone`, `--note`.
+- [x] **Step 2 :** docstring du fichier : ajouter les touches A Z E R, Maj, S et les options `--zone`, `--note`.
 
 ### Task 8 : Dépendances, README, vérification, journal
 
 **Files:** Modify `requirements.txt`, `README.md`, `JOURNAL.md`, `docs/superpowers/specs/2026-09-23-etape3-reactivite-design.md`
 
-- [ ] **Step 1 :** `.venv/bin/pip freeze > requirements.txt` puis relire : doit contenir `sounddevice==0.5.6`, `python-osc==1.10.2`, `cffi`, `pycparser`.
-- [ ] **Step 2 :** README : section « Le son et les capteurs (étape 3) » : lister les entrées audio (`.venv/bin/python -m sounddevice`), mettre une partie du nom dans `audio_entree`, `simulateur = false` ; macOS : autoriser le micro au Terminal ; Windows : le pare-feu doit laisser entrer l'UDP 7000 (la même case « Réseaux privés ET publics » pour `python.exe` suffit) ; touches.
-- [ ] **Step 3 :** `.venv/bin/python entrees.py` → `autotest OK`.
-- [ ] **Step 4 :** `.venv/bin/python kikina.py --secondes 200` : 30 i/s tenus, marée qui monte vers 1 entre 60 et 130 s puis redescend, compteur de notes qui avance.
-- [ ] **Step 5 :** test OSC réel : pendant que `kikina.py` tourne, `.venv/bin/python -c "from pythonosc.udp_client import SimpleUDPClient as C; c=C('127.0.0.1',7000); c.send_message('/zone/3/energie', 1.0)"` → la ligne console affiche `zones 0.0 0.0 1.0 0.0`.
-- [ ] **Step 6 :** mettre à jour la conception (`notes_saut_db`, volume moyenné, test.wav) et `JOURNAL.md` (ce qui marche, fragile, comment relancer, constats Kikinator pour Arthur).
-- [ ] **Step 7 :** commit + push.
+- [x] **Step 1 :** `.venv/bin/pip freeze > requirements.txt` puis relire : doit contenir `sounddevice==0.5.6`, `python-osc==1.10.2`, `cffi`, `pycparser`.
+- [x] **Step 2 :** README : section « Le son et les capteurs (étape 3) » : lister les entrées audio (`.venv/bin/python -m sounddevice`), mettre une partie du nom dans `audio_entree`, `simulateur = false` ; macOS : autoriser le micro au Terminal ; Windows : le pare-feu doit laisser entrer l'UDP 7000 (la même case « Réseaux privés ET publics » pour `python.exe` suffit) ; touches.
+- [x] **Step 3 :** `.venv/bin/python entrees.py` → `autotest OK`.
+- [x] **Step 4 :** `.venv/bin/python kikina.py --secondes 200` : 30 i/s tenus, marée qui monte vers 1 entre 60 et 130 s puis redescend, compteur de notes qui avance.
+- [x] **Step 5 :** test OSC réel : pendant que `kikina.py` tourne, `.venv/bin/python -c "from pythonosc.udp_client import SimpleUDPClient as C; c=C('127.0.0.1',7000); c.send_message('/zone/3/energie', 1.0)"` → la ligne console affiche `zones 0.0 0.0 1.0 0.0`.
+- [x] **Step 6 :** mettre à jour la conception (`notes_saut_db`, volume moyenné, test.wav) et `JOURNAL.md` (ce qui marche, fragile, comment relancer, constats Kikinator pour Arthur).
+- [x] **Step 7 :** commit + push.

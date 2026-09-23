@@ -35,7 +35,7 @@ def lire_wav(chemin):
 
 
 class Analyse:
-    """Écoute le son bloc par bloc : volume (dB, moyenné sur 1 s), graves et aigus (0 à 1), notes.
+    """Écoute le son bloc par bloc : volume (dB, moyenné sur 1 s), graves (0 à 1), brillance (Hz), notes.
 
     Une note = une bande d'octave dont le niveau dépasse de `saut_db` son maximum des 0,6 s
     précédentes. Une ondulation d'une note qui tient ne dépasse pas ses propres crêtes : elle
@@ -51,17 +51,18 @@ class Analyse:
         f = np.fft.rfftfreq(FENETRE, 1 / sr)
         self.freqs = f
         self.b_graves = (f >= 25) & (f < 160)
-        self.b_aigus = (f >= 2000) & (f < 8000)
+        self.b_brillance = (f >= 60) & (f < 8000)
         self.b_notes = (f >= OCTAVES[0]) & (f < OCTAVES[-1])
         self.b_octaves = [(f >= a) & (f < b) for a, b in zip(OCTAVES, OCTAVES[1:])]
         self.bandes = deque(maxlen=RECUL)       # niveaux des bandes (dB) des derniers blocs
         self.spectres = deque(maxlen=4)         # derniers spectres, pour lire la hauteur d'une note
         self.ressort = [0.0, 0.0]               # combien ça ressortait aux deux blocs précédents
         self.energie = 0.0
-        self.max_graves = self.max_aigus = 1e-9
+        self.max_graves = 1e-9
         self.depuis_note = 1.0
         self.volume_db = -120.0
-        self.graves = self.aigus = 0.0
+        self.graves = 0.0
+        self.brillance = 0.0                    # fréquence moyenne du son (Hz), 0 dans le silence
         self.notes = deque(maxlen=32)           # (force 0 à 1, fréquence en Hz), lues par kikina.py
 
     def bloc(self, x):
@@ -73,12 +74,13 @@ class Analyse:
         instant_db = 10 * math.log10(float(np.mean(x * x)) + 1e-12)
         spectre = np.abs(np.fft.rfft(self.histoire * self.hann)) ** 2
         if instant_db < SILENCE_DB:
-            self.graves = self.aigus = 0.0
-        else:  # chaque bande rapportée à son maximum récent, qui redescend lentement (20 s)
-            oubli = math.exp(-dt / 20)
-            g, a = float(spectre[self.b_graves].sum()), float(spectre[self.b_aigus].sum())
-            self.max_graves, self.max_aigus = max(g, self.max_graves * oubli), max(a, self.max_aigus * oubli)
-            self.graves, self.aigus = g / self.max_graves, a / self.max_aigus
+            self.graves = self.brillance = 0.0
+        else:  # graves rapportés à leur maximum récent, qui redescend lentement (20 s)
+            g = float(spectre[self.b_graves].sum())
+            self.max_graves = max(g, self.max_graves * math.exp(-dt / 20))
+            self.graves = g / self.max_graves
+            s = spectre[self.b_brillance]  # brillance : fréquence moyenne pondérée par l'énergie
+            self.brillance = float((s * self.freqs[self.b_brillance]).sum() / (s.sum() + 1e-12))
 
         # Notes : on regarde si le bloc précédent était un pic de "ça ressort" (un bloc de retard).
         bandes = np.array([10 * math.log10(float(spectre[b].sum()) + 1e-9) for b in self.b_octaves])
@@ -104,8 +106,7 @@ class Entrees:
 
     def __init__(self, cfg):
         e = cfg["entrees"]
-        self.presence = [0.0] * 4
-        self.energie = [0.0] * 4
+        self._zones = {}                        # (mesure, zone) : (valeur, date de réception)
         self._densite, self._densite_date = 0.0, -1e9
         if e["simulateur"]:
             self.son, sr = lire_wav(ICI / e["son_test"])
@@ -151,7 +152,12 @@ class Entrees:
         if m == ["music", "densite"]:
             self._densite, self._densite_date = v, time.monotonic()
         elif len(m) == 3 and m[0] == "zone" and m[1] in ("1", "2", "3", "4") and m[2] in ("presence", "energie"):
-            getattr(self, m[2])[int(m[1]) - 1] = v
+            self._zones[m[2], int(m[1]) - 1] = v, time.monotonic()
+
+    def zone(self, mesure, i):
+        """Dernière valeur reçue ("presence" ou "energie", zone 0 à 3), 0 si rien reçu depuis 3 s (capteur arrêté)."""
+        v, date = self._zones.get((mesure, i), (0.0, -1e9))
+        return v if time.monotonic() - date < 3 else 0.0
 
     def densite(self):
         """Densité envoyée par la musique en OSC, ou None si rien reçu depuis 5 s."""
@@ -196,7 +202,7 @@ if __name__ == "__main__":  # autotest
     assert dense > calme + 3, "le volume ne monte pas dans la partie dense"
 
     ent = Entrees.__new__(Entrees)  # juste la partie OSC, sans le son
-    ent.presence, ent.energie, ent._densite, ent._densite_date = [0.0] * 4, [0.0] * 4, 0.0, -1e9
+    ent._zones, ent._densite, ent._densite_date = {}, 0.0, -1e9
     disp = Dispatcher()
     disp.set_default_handler(ent._osc)
     serveur = ThreadingOSCUDPServer(("127.0.0.1", 0), disp)
@@ -207,7 +213,9 @@ if __name__ == "__main__":  # autotest
     client.send_message("/zone/9/energie", 1.0)   # zone inconnue : ignorée
     client.send_message("/music/densite", 3.0)    # borné à 1
     time.sleep(0.3)
-    assert abs(ent.energie[1] - 0.7) < 1e-6 and ent.energie[0] == 0, ent.energie
+    assert abs(ent.zone("energie", 1) - 0.7) < 1e-6 and ent.zone("energie", 0) == 0
+    ent._zones["energie", 1] = (0.7, time.monotonic() - 4)   # capteur muet depuis 4 s : retombe à 0
+    assert ent.zone("energie", 1) == 0
     assert ent.densite() == 1.0, ent.densite()
     serveur.shutdown()
     print("autotest OK")

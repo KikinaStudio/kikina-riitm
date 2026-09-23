@@ -1,7 +1,8 @@
 # Kikina @ RIITM - moteur visuel "Sound, alive."
 
 Ce dossier produit un flux vidéo NDI nommé `KIKINA` (le bandeau 360 de la salle).
-- `kikina.py` : le moteur visuel (la matière).
+- `kikina.py` : le moteur visuel (la matière, qui écoute la musique et les zones).
+- `entrees.py` : l'écoute du son et des capteurs (OSC). `python entrees.py` lance son autotest.
 - `test_ndi.py` : le test du tuyau NDI, à relancer sur chaque nouvelle machine.
 
 Le "Terminal" (macOS) ou "PowerShell" (Windows) est la fenêtre où l'on tape des commandes.
@@ -84,12 +85,42 @@ Windows :
 ```
 Une fenêtre s'ouvre avec le bandeau découpé en 4 lignes (une par mur). Le titre de la fenêtre donne les images/seconde.
 
-Touches (cliquer d'abord dans la fenêtre) : **C** calme, **M** moyen, **D** dense (niveau d'éveil global, ce que fera la musique), **P** capture PNG dans `captures/`, **Échap** quitter.
+Au lancement, `assets/test.wav` (3 minutes du Kikinator) se joue en boucle dans les haut-parleurs et l'image l'écoute.
 
-**Bouger la souris** sur une des 4 lignes simule un visiteur qui bouge à cet endroit du mur : la matière s'y soulève. `--agiter` lance un visiteur simulé sur le mur 1.
+Touches (cliquer d'abord dans la fenêtre) :
+- **A, Z, E, R maintenues** : quelqu'un bouge dans la zone 1, 2, 3, 4. **Maj + A, Z, E, R** : allume ou éteint une présence immobile.
+- **C** calme, **M** moyen, **D** dense : forcent le niveau. **S** : le niveau suit à nouveau la musique.
+- **P** capture PNG dans `captures/`, **Échap** quitter.
+
+**Bouger la souris** sur une des 4 lignes simule un visiteur qui bouge à cet endroit du mur : la matière s'y soulève. `--agiter` lance un visiteur simulé sur le mur 1, `--zone 2` garde la zone 2 agitée, `--note` fait une note toutes les 4 s.
+
+Toutes les 2 secondes, une deuxième ligne affiche ce que le programme entend : volume du son (en dB), marée (0 calme, 1 dense), graves, brillance (fréquence moyenne du son, plus haute = son plus clair), nombre de notes entendues, mouvement des 4 zones.
+
+Un seul Kikina à la fois : deux programmes qui envoient chacun une source NDI `KIKINA` font planter le second.
 
 Le look se règle dans `config.toml` (bloc `[matiere]`) et dans les fichiers de `shaders/`. On enregistre le fichier, l'image change toute seule, sans relancer.
 
 ## Réglages
 
-Tout est dans `config.toml` : largeur, hauteur, images/seconde, `scale` (échelle de travail), nom NDI.
+Tout est dans `config.toml` : largeur, hauteur, images/seconde, `scale` (échelle de travail), nom NDI, la matière (`[matiere]`), la musique (`[musique]`), les zones (`[zones]`), les entrées (`[entrees]`).
+
+## Le son et les capteurs (étape 3)
+
+**Le son.** Par défaut (`simulateur = true` dans `[entrees]`), le son vient de `assets/test.wav`. Pour écouter la vraie musique :
+1. Lister les entrées audio de la machine :
+   ```bash
+   .venv/bin/python -m sounddevice
+   ```
+   (Windows : `.venv\Scripts\python -m sounddevice`). Repérer le nom de l'entrée où arrive le mix d'Arthur.
+2. Dans `config.toml`, mettre une partie de ce nom dans `audio_entree` (par exemple `"Scarlett"`) et `simulateur = false`. Relancer.
+3. macOS : la première fois, autoriser le Terminal à utiliser le micro (Réglages Système > Confidentialité et sécurité > Micro).
+4. Régler `volume_calme_db` et `volume_dense_db` (bloc `[musique]`) en lisant le volume affiché dans la console pendant un passage calme puis un passage dense.
+
+**Les capteurs.** Le programme écoute les messages OSC (des petits messages envoyés par le réseau) sur le port 7000 : `/zone/1/presence` à `/zone/4/presence`, `/zone/1/energie` à `/zone/4/energie`, `/music/densite`, valeurs de 0 à 1. Windows : c'est le même pare-feu que pour NDI (étape 7 de l'installation), `python.exe` doit être autorisé sur les réseaux privés ET publics, sinon les messages venant d'une autre machine n'arrivent pas.
+
+Une zone dont on ne reçoit plus rien depuis 3 s retombe à zéro (si le programme des webcams s'arrête, la matière se calme).
+
+Tester l'OSC sans capteur, pendant que `kikina.py` tourne (la zone 3 s'agite pendant 3 s, la console affiche `zones 0.0 0.0 1.0 0.0`) :
+```bash
+.venv/bin/python -c "from pythonosc.udp_client import SimpleUDPClient as C; C('127.0.0.1', 7000).send_message('/zone/3/energie', 1.0)"
+```

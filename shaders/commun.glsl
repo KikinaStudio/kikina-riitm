@@ -74,3 +74,29 @@ vec2 courant_fin(vec2 u) {
     #undef P
     return vec2(dy, -dx) / (2.0 * e * k);
 }
+
+// Les ondes des notes : anneaux qui partent d'un point et s'élargissent.
+// Chaque onde : x, y (mêmes unités que les particules), âge (s), force (0 = éteinte).
+uniform vec4 ondes[8];
+uniform float onde_vitesse;   // hauteurs de bandeau par seconde
+uniform float onde_duree;     // s
+uniform float onde_largeur;   // épaisseur du front (hauteurs)
+
+// Présence des fronts d'onde au point p (0 = aucun) ; `dir` : poussée vers l'extérieur.
+float fronts(vec2 p, out vec2 dir) {
+    float s = 0.0;
+    dir = vec2(0.0);
+    for (int i = 0; i < 8; i++) {
+        vec4 o = ondes[i];
+        if (o.w <= 0.0) continue;
+        vec2 d = p - o.xy;
+        d.x -= aspect * round(d.x / aspect);                  // le bandeau boucle en x
+        float r = length(d);
+        float rayon = onde_vitesse * o.z * (0.5 + o.w);       // une note forte va plus loin
+        float vie = smoothstep(0.0, 0.1, o.z) * (1.0 - smoothstep(0.3, 1.0, o.z / onde_duree));
+        float f = exp(-pow((r - rayon) / onde_largeur, 2.0)) * o.w * vie;
+        s += f;
+        dir += d / max(r, 1e-4) * f;
+    }
+    return s;
+}

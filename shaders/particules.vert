@@ -11,6 +11,8 @@ uniform float densite;         // 0 à 1 : part des particules allumées
 uniform float taille;          // diamètre moyen en px (à scale 1)
 uniform float echelle;         // scale de config.toml
 uniform float voile_contraste; // 0 = matière uniforme, 1 = masses et vides marqués
+uniform float onde_eclat;      // lumière en plus sur le front d'une note
+uniform float scintille;       // frémissement des grains fins (son clair)
 out float lumiere;
 
 void main() {
@@ -34,6 +36,11 @@ void main() {
     float h = hasard(id * 13U + 1U);
     float gros = pow(h, 12.0);
     lumiere = allumee * fondu * masse * (0.12 + 0.88 * pow(hasard(id * 17U + 5U), 2.5)) * (1.0 + 1.5 * gros);
+
+    vec2 inutile;
+    lumiere *= 1.0 + onde_eclat * min(fronts(e.xy, inutile), 1.5);   // le front d'une note s'éclaire
+    // son clair : les grains fins frémissent, chacun à son rythme (3 à 7 fois par seconde)
+    lumiere *= 1.0 + scintille * (1.0 - gros) * sin(6.2832 * (temps * (3.0 + 4.0 * hasard(id * 23U + 7U)) + hasard(id * 29U + 3U)));
 
     gl_PointSize = (taille * (0.8 + 1.6 * gros) + 1.0) * echelle;
     gl_Position = lumiere < 0.004
