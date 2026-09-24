@@ -13,7 +13,7 @@
       "atelier": "Densité",
       "cards": [
         {"famille": "invitation", "titre": "Entrez dans le carré", "texte": "Entrez un par un, puis tous ensemble. Chaque personne ajoute une couche à la musique. Seul, vous entendez une ligne ; à dix, un paysage entier. Le groupe compose sans le savoir."},
-        {"famille": "perception", "titre": "Combien sommes-nous ?", "texte": "La salle compte les présences dans la zone, sans chercher à savoir qui vous êtes. Plus le groupe se rassemble, plus la musique s’épaissit, en fondu, sans jamais couper."},
+        {"famille": "perception", "titre": "Combien sommes-nous ?", "texte": "La salle compte les présences dans la zone, sans chercher à savoir qui vous êtes. Plus le groupe se rassemble, plus la musique s’épaissit, sans jamais couper."},
         {"famille": "cas d’usage", "titre": "Suivre l’affluence", "texte": "Dans un hôtel ou une boutique, la même œuvre s’allège aux heures creuses et s’étoffe quand le lieu se remplit. L’ambiance suit la vie du lieu au lieu de l’ignorer."}
       ]
     },

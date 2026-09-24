@@ -84,7 +84,7 @@ Règles :
 - Trois familles : notre tech, les neurosciences, les lieux (retail, spa, hôpital...). Textes dans `assets/cards/cards.json`.
 - Visuels : PNG transparents dessinés dans Figma à la taille réelle en pixels, dans `assets/cards/`. Changer un texte ne demande jamais de toucher au code.
 - Chaque mur porte en permanence le titre de son atelier (il nomme la zone), plus une card explicative au plus à la fois (décidé le 23/09). Mur 4 : seulement 3,6 m libres (porte), titre court.
-- Cards verticales (décidé le 23/09) : une colonne qui coupe le mur sur presque toute sa hauteur (40 px d'écart en haut et en bas), environ 640 px de large, titre 80 px sur 1 ou 2 lignes, puis environ 45 mots (50 au plus), corps 32 px minimum. Jamais dans une zone morte, jamais à cheval sur deux murs.
+- Cards verticales (décidé le 23/09) : une colonne qui coupe le mur sur presque toute sa hauteur (40 px d'écart en haut et en bas), environ 650 px de large (texte 520 px + marge intérieure de 64 px, soit 2 fois le corps du texte), titre 80 px sur 1 ou 2 lignes, puis 25 à 35 mots, corps 32 px minimum. Jamais dans une zone morte, jamais à cheval sur deux murs.
 - La matière se condense pour former la card, puis elle se dissout. Durée 20 à 30 s. Dans la colonne, la matière est coupée net (panneau à peine plus clair que le fond).
 - Déclenchement par la présence dans la zone et par le déroulé, pas par un minuteur seul.
 

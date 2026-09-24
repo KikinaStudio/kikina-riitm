@@ -132,7 +132,7 @@ Chaque mur a son dossier `assets/cards/murN/` (un atelier par mur) :
 - `titre.png` : le nom de l'atelier, toujours affiché en haut à gauche du mur ;
 - tous les autres PNG : les cards du mur, montrées par ordre alphabétique de leur nom, une à la fois, tant qu'un groupe est présent dans la zone. Une card est une colonne sombre qui coupe le mur sur presque toute sa hauteur, avec son texte en haut. Elle vit 26 s : la matière est aspirée dans la colonne (4 s), le texte reste lisible (18 s), puis la matière revient combler la colonne (4 s).
 
-**Ajouter une card** : déposer un PNG dans le dossier du mur. Pas besoin de relancer, les dossiers sont relus toutes les 2 s. Le PNG : le texte seul, blanc sur fond transparent, à la taille réelle en pixels : environ 560 px de large, 600 px de haut au plus (la colonne ajoute 40 px de marge tout autour). Une card trop grande pour son mur est ignorée et la console le dit. Pour vérifier avant le show :
+**Ajouter une card** : déposer un PNG dans le dossier du mur. Pas besoin de relancer, les dossiers sont relus toutes les 2 s. Le PNG : le texte seul, blanc sur fond transparent, à la taille réelle en pixels : environ 520 px de large, 552 px de haut au plus (la colonne ajoute 64 px de marge tout autour). Une card trop grande pour son mur est ignorée et la console le dit. Pour vérifier avant le show :
 ```bash
 .venv/bin/python cartes.py
 ```

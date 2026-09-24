@@ -18,8 +18,8 @@ POLICE = "/System/Library/Fonts/Avenir Next.ttc"
 DEMI, MOYEN, NORMAL = 2, 5, 7   # graisses dans le fichier de police
 ATELIER_PX = 48                 # titre de l'atelier : petit et discret, en capitales espacées
 TITRE_PX, TEXTE_PX = 80, 32     # card : titre 80 à 120 px, texte 32 px minimum
-LARGEUR = 560                   # largeur du texte ; la colonne ajoute sa marge intérieure autour
-HAUTEUR_MAX = 600               # hauteur de la colonne (760 - 2 x 40) moins sa marge intérieure (2 x 40)
+LARGEUR = 520                   # largeur du texte ; la colonne ajoute sa marge intérieure (64 px) autour
+HAUTEUR_MAX = 552               # hauteur de la colonne (760 - 2 x 40) moins sa marge intérieure (2 x 64)
 MOTS_MAX = 50
 
 

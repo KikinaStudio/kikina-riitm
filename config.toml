@@ -116,7 +116,7 @@ presence_seuil = 0.5       # présence (0 à 1) à partir de laquelle un groupe 
 titre_lumiere = 0.7        # luminosité du titre de l'atelier (1 = comme les cards)
 haut_px = 40               # distance entre le haut du mur et le titre de l'atelier
 ecart_px = 40              # la colonne s'arrête à 40 px du haut et du bas du mur (elle ne le coupe pas en entier)
-interieur_px = 40          # marge entre le bord de la colonne et son texte
+interieur_px = 64          # marge entre le bord de la colonne et son texte (2 fois le corps du texte)
 marge_px = 60              # marge autour du texte : bords du mur, portes, titre
 creux = 1.0                # part des grains éteints dans la colonne (1 = coupure nette)
 creux_bord_px = 15         # le bord de la coupure, en fondu

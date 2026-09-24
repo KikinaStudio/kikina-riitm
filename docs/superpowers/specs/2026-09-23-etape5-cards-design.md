@@ -9,6 +9,7 @@ Après un premier essai (cards horizontales dans la moitié haute), Jérémie ve
 - la matière est coupée net dans la colonne (creux 100 %, bord de 15 px), la colonne est un panneau à peine plus clair que le fond (`fond` 0,07) ;
 - formation : la matière voisine (150 px) est aspirée dans la colonne et s'y éteint ; dissolution : elle revient combler la colonne ;
 - placement : n'importe où sur le mur, loin des portes (sur toute la hauteur) et du titre de l'atelier.
+Le 24/09, Jérémie trouve le texte trop collé aux bords : marge intérieure portée à 64 px (2 fois le corps du texte, règle courante d'interface), texte sur 520 px, colonne d'environ 650 px, 552 px de hauteur utile.
 Le reste du document décrit la première version, remplacée sur ces points.
 
 ## Ce qu'on voit (première version)

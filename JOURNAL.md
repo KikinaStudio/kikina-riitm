@@ -4,6 +4,39 @@
 
 ---
 
+## 24 septembre 2026 - Cards : marges, et où on en est (à relire en début de prochaine session)
+
+### Ce qui a été fait
+- Texte des cards jugé trop collé aux bords par Jérémie : marge intérieure de la colonne portée de 40 à 64 px (2 fois le corps du texte, règle courante d'interface). Texte sur 520 px, colonne d'environ 650 px. Une card raccourcie de deux mots pour tenir (« Combien sommes-nous ? »). Autotest `cartes.py` OK, les 12 cards tiennent, y compris sur le mur 4 (2 à 3 positions possibles, c'est serré).
+
+### État du projet
+- Étapes 1, 2, 3 validées. Étape 5 (titres et cards) faite, **à valider par Jérémie** après la correction des marges. Étape 4 (capteurs) pas commencée : Jérémie a choisi de faire les cards avant.
+- Ateliers : ceux du Notion (voir la section « Sources » de CLAUDE.md). Mur 1 Accueil, mur 2 Densité, mur 3 Mouvement, mur 4 Proximité, le Cœur (la bague) en final sur toute la salle.
+- Textes des cards provisoires, dans `assets/cards/cards.json` (refaire les PNG avec `outils/fabriquer_cards.py`).
+
+### Pour la prochaine session
+1. Faire valider l'étape 5 (lancer `.venv/bin/python kikina.py --zone 1`, une colonne se forme sur le mur 1 environ 3 s après).
+2. **Avant l'étape 4, trancher avec Jérémie un écart entre CLAUDE.md et le Notion** :
+   - CLAUDE.md prévoit des webcams et une simple différence d'images (quantité de mouvement par zone, `/zone/N/presence` et `/zone/N/energie`).
+   - Le Notion prévoit des caméras de profondeur infrarouge (type RealSense / Orbbec) et une estimation de squelette, une mesure différente par atelier (Accueil : les pas après une ligne ; Densité : nombre de personnes ; Mouvement : quantité de mouvement ; Proximité : distance à un objet), et les silhouettes des visiteurs projetées sur les murs.
+   - Il faudra étendre les adresses OSC en conséquence.
+3. Le storytelling du Notion veut les faits scientifiques plutôt à la fin (« WHAT JUST HAPPENED? »), la page principale veut des écrans d'info intercalés : à garder en tête pour l'étape 6 (déroulé).
+
+### Ce qui reste fragile ou ouvert
+- Rendu à 20-22 ms quand Jérémie lance le moteur (fenêtre visible), contre 13 ms dans mes tests : cause pas encore cherchée. Limite 33 ms.
+- Craquement du son du simulateur : réserve ajoutée le 23/09, pas encore confirmé à l'oreille.
+- Étape 1 bis (PC du show) toujours pas faite.
+- À fournir par Jérémie : chiffres clés sourcés pour les cards, langue des cards, textes définitifs.
+- À dire à Arthur : voir l'entrée de l'étape 3 (crew qui ne relâche pas les voix, volume qui ne suit pas la densité, `/music/densite`).
+
+### Comment relancer
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/python kikina.py --zone 1
+```
+
+---
+
 ## 23 septembre 2026 - Étape 5 : titres et cards (à valider par Jérémie)
 
 Conception : `docs/superpowers/specs/2026-09-23-etape5-cards-design.md`. Jérémie m'a laissé concevoir.
