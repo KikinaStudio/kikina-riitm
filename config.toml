@@ -138,6 +138,7 @@ ips = 30                   # cadence demandée à la caméra (elle sait aller à
 exposition_figee = true    # la caméra règle sa luminosité pendant les 5 s avant le fond, puis n'y touche plus (touche F : recommencer)
 pas_seuil = 0.15           # atelier Accueil : part d'une bande qui doit différer du fond pour dire "un pied est dessus"
 pas_vide_s = 1.5           # bandes vides depuis ce temps : prêt pour la personne suivante
+fond_delai_s = 10          # temps laissé pour sortir du champ avant la photo du fond (au lancement et après la touche F)
 fond_s = 120               # le fond suit lentement l'image (lumière qui dérive). 0 = fond fixe. Touche F : le reprendre
 
 # Une caméra : une partie de son nom, et ses zones. Une zone = un rectangle dans l'image de la

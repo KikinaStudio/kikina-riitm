@@ -25,7 +25,7 @@ from pythonosc.udp_client import SimpleUDPClient
 ICI = Path(__file__).parent
 CONFIG = ICI / "config.toml"
 LARGEUR = 320      # l'image est réduite à cette largeur avant mesure
-DELAI_FOND = 5     # secondes entre le lancement (ou la touche F) et la prise du fond
+DELAI_FOND = 5     # secondes entre le lancement (ou la touche F) et la prise du fond (réglage `fond_delai_s`)
 
 
 def preparer(image):
@@ -236,7 +236,9 @@ def lire_config():
 
 
 def main():
+    global DELAI_FOND
     c = lire_config()
+    DELAI_FOND = c["fond_delai_s"]
     date_config = CONFIG.stat().st_mtime
     cameras = ouvrir_cameras(c)
     clients = [SimpleUDPClient(v.rsplit(":", 1)[0], int(v.rsplit(":", 1)[1])) for v in c["osc_vers"]]
@@ -263,6 +265,7 @@ def main():
             date_config = CONFIG.stat().st_mtime
             try:
                 c = lire_config()
+                DELAI_FOND = c["fond_delai_s"]
             except (tomllib.TOMLDecodeError, KeyError) as err:
                 print(f"config.toml illisible, je garde les anciens réglages : {err}")
         maintenant = time.monotonic()
