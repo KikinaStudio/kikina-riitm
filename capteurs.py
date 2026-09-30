@@ -86,7 +86,8 @@ class Camera:
                 cap = cv2.VideoCapture(numero, pilote)
                 if not cap.isOpened():
                     raise SystemExit(f"Caméra '{nom}' : impossible de l'ouvrir. macOS : Réglages Système > "
-                                     "Confidentialité et sécurité > Caméra, autoriser le Terminal, puis relancer.")
+                                     "Confidentialité et sécurité > Caméra, autoriser l'application d'où ce programme "
+                                     "est lancé (le Terminal), puis relancer.")
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
                 self.cap, self.identifiant = cap, identifiant
