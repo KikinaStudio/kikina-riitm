@@ -74,6 +74,7 @@ class Camera:
         self.cap = self.identifiant = self.image = None
         self.avant = self.fond = None
         self.fond_a = self.essai = 0.0
+        self.lumiere = [255.0, 0.0]  # gris moyen le plus sombre et le plus clair depuis le dernier affichage
 
     def ouvrir(self, prises):
         """Cherche la caméra par son nom et l'ouvre. `prises` : identifiants tenus par les autres caméras."""
@@ -174,6 +175,7 @@ def main():
                     cv2.imshow(cam.cherche, noir)
                 continue
             lues += 1
+            cam.lumiere = [min(cam.lumiere[0], float(gris.mean())), max(cam.lumiere[1], float(gris.mean()))]
             if cam.avant is None:
                 cam.avant = gris
             if cam.fond is None and maintenant >= cam.fond_a:
@@ -193,7 +195,11 @@ def main():
             client.send_message(f"/zone/{n}/energie", e)
         images += lues > 0
         if maintenant - affiche >= 2:
-            print(f"{images / (maintenant - affiche):4.1f} i/s   " +
+            # lumière : si l'écart entre le plus sombre et le plus clair est grand alors que rien ne bouge, l'image clignote
+            lumieres = " ".join(f"{a:.0f}-{b:.0f}" for a, b in (cam.lumiere for cam in cameras) if a <= b)
+            for cam in cameras:
+                cam.lumiere = [255.0, 0.0]
+            print(f"{images / (maintenant - affiche):4.1f} i/s   lumière {lumieres}   " +
                   "   ".join(f"zone {n} : présence {p:.2f} mouvement {e:.2f}" for n, (p, e) in sorted(envoi.items())))
             affiche, images = maintenant, 0
         touche = cv2.waitKey(1) & 0xFF
