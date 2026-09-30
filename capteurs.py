@@ -17,7 +17,6 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from cv2_enumerate_cameras import enumerate_cameras
 from pythonosc.udp_client import SimpleUDPClient
 
 ICI = Path(__file__).parent
@@ -48,9 +47,24 @@ def mesurer(gris, avant, fond, rect, c):
     return min(1.0, la / c["presence_pleine"]), min(1.0, bouge / c["energie_pleine"]), la, bouge
 
 
+def lister_cameras():
+    """[(nom, numéro pour OpenCV, pilote)] des caméras branchées."""
+    if sys.platform == "darwin":
+        # La même liste et le même tri qu'OpenCV (cap_avfoundation_mac.mm), pour que le numéro
+        # désigne bien la caméra de ce nom. Une liste faite autrement peut être décalée.
+        import AVFoundation as AV
+        liste = AV.AVCaptureDevice.devicesWithMediaType_(AV.AVMediaTypeVideo).arrayByAddingObjectsFromArray_(
+            AV.AVCaptureDevice.devicesWithMediaType_(AV.AVMediaTypeMuxed))
+        liste = liste.sortedArrayUsingComparator_(lambda a, b: a.uniqueID().compare_(b.uniqueID()))
+        return [(str(a.localizedName()), i, cv2.CAP_AVFOUNDATION) for i, a in enumerate(liste)]
+    # Windows : un seul pilote, sinon chaque caméra apparaît deux fois. Pas encore essayé sur le PC.
+    from cv2_enumerate_cameras import enumerate_cameras
+    return [(a.name, a.index, a.backend) for a in enumerate_cameras(cv2.CAP_MSMF)]
+
+
 class Camera:
-    def __init__(self, nom, appareil):
-        self.nom, self.appareil = nom, appareil
+    def __init__(self, nom, numero, pilote):
+        self.nom, self.numero, self.pilote = nom, numero, pilote
         self.cap = None
         self.avant = self.fond = None
         self.fond_a = self.essai = self.vue = 0.0
@@ -58,7 +72,7 @@ class Camera:
 
     def ouvrir(self):
         self.essai = time.monotonic()
-        self.cap = cv2.VideoCapture(self.appareil.index, self.appareil.backend)
+        self.cap = cv2.VideoCapture(self.numero, self.pilote)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         self.avant = self.fond = None
@@ -78,20 +92,20 @@ class Camera:
 
 
 def ouvrir_cameras(c):
-    # Windows : un seul pilote, sinon chaque caméra apparaît deux fois. Pas encore essayé sur le PC.
-    dispo = list(enumerate_cameras(cv2.CAP_MSMF if sys.platform == "win32" else cv2.CAP_ANY))
-    noms = " | ".join(a.name for a in dispo) or "aucune"
+    dispo = lister_cameras()
+    noms = " | ".join(f"{numero} {nom}" for nom, numero, _ in dispo) or "aucune"
+    print(f"Caméras branchées : {noms}")
     cameras = []
     for k in c["camera"]:  # deux caméras du même nom : la 1re du fichier prend la 1re trouvée, etc.
-        trouve = next((a for a in dispo if k["nom"].lower() in a.name.lower()), None)
+        trouve = next((a for a in dispo if k["nom"].lower() in a[0].lower()), None)
         if trouve is None:
-            raise SystemExit(f"Caméra '{k['nom']}' introuvable. Caméras branchées : {noms}")
+            raise SystemExit(f"Caméra '{k['nom']}' introuvable parmi les caméras branchées.")
         dispo.remove(trouve)
-        cam = Camera(trouve.name, trouve)
+        cam = Camera(*trouve)
         if not cam.cap.isOpened():
-            raise SystemExit(f"Caméra '{trouve.name}' : impossible de l'ouvrir. macOS : Réglages Système > "
+            raise SystemExit(f"Caméra '{cam.nom}' : impossible de l'ouvrir. macOS : Réglages Système > "
                              "Confidentialité et sécurité > Caméra, autoriser le Terminal, puis relancer.")
-        print(f"Caméra : '{trouve.name}'")
+        print(f"J'ouvre : {cam.numero} {cam.nom}")
         cameras.append(cam)
     return cameras
 

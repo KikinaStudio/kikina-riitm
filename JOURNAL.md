@@ -23,6 +23,7 @@ L'écart CLAUDE.md / Notion noté le 24/09 est tranché par le matériel : camé
 
 ### Ce qui reste fragile
 - **Pas encore essayé avec la vraie caméra** : macOS refuse la caméra aux programmes que je lance moi-même. C'est Jérémie qui le lance depuis le Terminal.
+- Premier essai de Jérémie : c'est la caméra du MacBook qui s'est allumée, pas la caméra USB. Non reproduit de mon côté (chez moi la caméra USB est bien la n°0 dans les deux listes). Corrigé à l'aveugle : sur Mac, `capteurs.py` fait maintenant sa liste exactement comme OpenCV (même liste, même tri), et affiche `Caméras branchées` et `J'ouvre`. **À confirmer par Jérémie.**
 - Pas encore vérifié : que la caméra voit bien l'infrarouge à travers le R72, que la projection n'est pas vue, que les projecteurs IR s'allument (cellule qui ne les allume que dans le noir, alimentation 12 V).
 - 2 caméras pour 4 zones : chaque caméra devra voir 2 zones. Emplacement à trouver sur place, rectangles à régler dans `config.toml`.
 - Une seule rallonge USB, et l'USB ne dépasse pas 5 m sans rallonge active : à regarder selon l'emplacement de la machine.
