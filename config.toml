@@ -133,6 +133,8 @@ osc_port = 7000
 seuil = 10                 # écart de gris (0 à 255) pour qu'un point compte ; monter si l'image vide fourmille de bleu
 presence_pleine = 0.10     # part de la zone qui diffère du fond (salle vide) pour une présence de 1
 energie_pleine = 0.03      # part de la zone qui change d'une image à l'autre pour un mouvement de 1
+ips = 30                   # cadence demandée à la caméra (elle sait aller à 120, mais l'image clignote sous un éclairage secteur)
+exposition_figee = true    # la caméra règle sa luminosité pendant les 5 s avant le fond, puis n'y touche plus (touche F : recommencer)
 fond_s = 120               # le fond suit lentement l'image (lumière qui dérive). 0 = fond fixe. Touche F : le reprendre
 
 # Une caméra : une partie de son nom, et ses zones. Une zone = un rectangle dans l'image de la

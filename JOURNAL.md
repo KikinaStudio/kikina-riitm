@@ -40,6 +40,11 @@ L'écart CLAUDE.md / Notion noté le 24/09 est tranché par le matériel : camé
 - Bon signe : image à dominante violette, la caméra voit donc bien l'infrarouge.
 - Ajouté : la console affiche `lumière mini-maxi` toutes les 2 s (gris moyen de l'image). Servira aussi sur place à vérifier que la projection n'est pas vue : filtre posé, ce chiffre ne doit pas bouger quand l'image projetée change.
 - Essayé sur les photos, pas retenu pour l'instant : mesurer sur le relief local de l'image (logarithme moins son flou) pour ignorer les changements de lumière d'ensemble. Ça ramène les fausses présences de 100 % à 20-30 %, insuffisant contre un tel clignotement. À reprendre si, une fois la lumière stable, l'exposition automatique gêne encore quand des gens entrent.
+- Réponse de Jérémie : projecteur IR débranché, filtre R72 posé, ça clignote encore. Donc ce n'est pas le projecteur : c'est la caméra (cadence ou exposition automatique).
+- Ce que la caméra annonce au Mac : à 640 x 480 elle tourne soit à 120 i/s (c'est ce que le système choisissait seul), soit à 30 i/s. À 120 i/s chaque image dure moins longtemps qu'un battement de l'éclairage secteur (100 par seconde), d'où un clignotement. Le Mac sait aussi figer son exposition (pas la régler à la main).
+- Corrigé dans `capteurs.py` (`regler`) : cadence demandée 30 i/s (`ips`), exposition automatique pendant les 5 s avant le fond puis figée (`exposition_figee`), touche F pour recommencer. La console dit ce qui a été réglé. Les appels au système marchent (essayés sans image), **l'effet sur le clignotement reste à confirmer par Jérémie** avec le chiffre `lumière`.
+- Sous Windows ces deux réglages ne sont pas faits (rien à essayer sans le PC) : à faire à l'étape 1 bis.
+- Un ancien `capteurs.py` lancé à 14 h 36 tournait encore en même temps que le nouveau (il envoyait aussi ses chiffres au moteur, depuis la caméra du MacBook). Je l'ai arrêté. Toujours quitter avec Échap avant de relancer.
 - Les chiffres de cet essai ne valent rien pour régler les seuils : fond pris avec Jérémie dans le champ, caméra en main, et la fin de l'essai venait de la caméra du Mac.
 
 ### Comment relancer

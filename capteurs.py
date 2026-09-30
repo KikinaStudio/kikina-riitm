@@ -66,11 +66,46 @@ def lister_cameras():
     return [(a.name, a.index, a.backend, a.path) for a in enumerate_cameras(cv2.CAP_MSMF)]
 
 
+def regler(identifiant, ips, figee):
+    """Cadence et exposition de la caméra. Renvoie ce qui a été réglé, en clair.
+
+    Sans ça, la caméra choisit seule une cadence très rapide (120 i/s : l'éclairage du secteur, qui
+    bat 100 fois par seconde, fait alors clignoter l'image) et change sa luminosité toute seule.
+    """
+    if sys.platform != "darwin":
+        # ponytail: Windows pas encore fait (rien à essayer sans le PC). À l'étape 1 bis :
+        # cap.set(CAP_PROP_FPS) et cap.set(CAP_PROP_AUTO_EXPOSURE) sur le pilote DirectShow.
+        return "réglages de la caméra : pas encore faits sous Windows"
+    import AVFoundation as AV  # OpenCV ne donne pas accès à ces réglages sur Mac : on passe par le système
+    d = AV.AVCaptureDevice.deviceWithUniqueID_(identifiant)
+    if d is None or not d.lockForConfiguration_(None)[0]:
+        return "réglages de la caméra refusés par le système"
+    def taille(f):
+        t = AV.CMVideoFormatDescriptionGetDimensions(f.formatDescription())
+        return t.width, t.height
+    cadence = lambda f: max(r.maxFrameRate() for r in f.videoSupportedFrameRateRanges())
+    formats = [f for f in d.formats() if taille(f) == (640, 480)]
+    if formats:
+        bon = min(formats, key=lambda f: abs(cadence(f) - ips))
+        if bon != d.activeFormat():
+            d.setActiveFormat_(bon)
+            plage = bon.videoSupportedFrameRateRanges()[0]
+            d.setActiveVideoMinFrameDuration_(plage.minFrameDuration())
+            d.setActiveVideoMaxFrameDuration_(plage.maxFrameDuration())
+    mode = AV.AVCaptureExposureModeLocked if figee else AV.AVCaptureExposureModeContinuousAutoExposure
+    if d.isExposureModeSupported_(mode):
+        d.setExposureMode_(mode)
+    d.unlockForConfiguration()
+    return (f"{taille(d.activeFormat())[0]} x {taille(d.activeFormat())[1]} à {cadence(d.activeFormat()):.0f} i/s, "
+            f"exposition {'figée' if d.exposureMode() == AV.AVCaptureExposureModeLocked else 'automatique'}")
+
+
 class Camera:
     """Une caméra cherchée par son nom. Débranchée, on l'attend : on n'en ouvre jamais une autre à sa place."""
 
-    def __init__(self, cherche):
-        self.cherche = cherche
+    def __init__(self, cherche, ips=30):
+        self.cherche, self.ips = cherche, ips
+        self.figee = False
         self.cap = self.identifiant = self.image = None
         self.avant = self.fond = None
         self.fond_a = self.essai = 0.0
@@ -95,8 +130,14 @@ class Camera:
                 self.avant = self.fond = None
                 self.fond_a = time.monotonic() + DELAI_FOND
                 print(f"J'ouvre : {numero} {nom}")
+                self.exposition(False)
                 return True
         return False
+
+    def exposition(self, figee):
+        """Automatique : la caméra cherche sa luminosité. Figée : elle n'y touche plus."""
+        self.figee = figee
+        print(f"Caméra '{self.cherche}' : {regler(self.identifiant, self.ips, figee)}")
 
     def lire(self, prises):
         """Petite image grise, ou None si la caméra ne répond pas (on la recherche toutes les 2 s)."""
@@ -115,7 +156,7 @@ def ouvrir_cameras(c):
     print(f"Caméras branchées : {noms}")
     cameras = []
     for k in c["camera"]:  # deux caméras du même nom : la 1re du fichier prend la 1re trouvée, etc.
-        cam = Camera(k["nom"])
+        cam = Camera(k["nom"], c["ips"])
         if not cam.ouvrir({a.identifiant for a in cameras}):
             raise SystemExit(f"Caméra '{k['nom']}' introuvable parmi les caméras branchées.")
         cameras.append(cam)
@@ -178,6 +219,8 @@ def main():
             cam.lumiere = [min(cam.lumiere[0], float(gris.mean())), max(cam.lumiere[1], float(gris.mean()))]
             if cam.avant is None:
                 cam.avant = gris
+            if c["exposition_figee"] and cam.fond is None and not cam.figee and maintenant >= cam.fond_a - 1:
+                cam.exposition(True)  # 1 s avant le fond : la luminosité ne bougera plus, le fond reste valable
             if cam.fond is None and maintenant >= cam.fond_a:
                 cam.fond = gris.copy()
                 print(f"Fond repris ('{cam.cherche}')")
@@ -215,6 +258,7 @@ def main():
         if touche in (ord("f"), ord("F")):
             for cam in cameras:
                 cam.fond, cam.fond_a = None, maintenant + DELAI_FOND
+                cam.exposition(False)  # la caméra recherche sa luminosité, puis on la fige de nouveau
             print(f"Sortez du champ : fond repris dans {DELAI_FOND} s")
     for cam in cameras:
         if cam.cap is not None:

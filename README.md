@@ -144,6 +144,7 @@ Ce qu'on voit : l'image de la caméra en gris, un cadre jaune par zone avec deux
 - Touche **P** : photo de ce que voit chaque caméra, dans `captures/` (pour dessiner les zones, ou pour me montrer l'image).
 - Une caméra débranchée est attendue et reprise toute seule quand elle revient (la fenêtre affiche « Camera debranchee »). Le programme n'ouvre jamais une autre caméra à sa place.
 - Réglages dans le bloc `[capteurs]` de `config.toml`, relus à chaud : `seuil` (à monter si l'image vide fourmille de bleu), `presence_pleine` et `energie_pleine` (à baisser si les chiffres ne montent pas assez), les rectangles des zones, `osc_adresse` (l'adresse de la machine du moteur si les caméras sont sur une autre).
+- La caméra est réglée à 30 images/seconde (`ips`) et son exposition (sa luminosité) est figée juste avant la photo du fond (`exposition_figee`). La console affiche `lumière 60-62` : le plus sombre et le plus clair des 2 dernières secondes. Pièce vide, les deux nombres doivent rester proches. Mac seulement pour l'instant.
 - Changer de caméra : mettre une partie de son nom dans `nom`. Si le nom est faux, le programme affiche la liste des caméras branchées. Deux caméras du même nom : deux blocs `[[capteurs.camera]]`, et si elles sont inversées, échanger leurs zones.
 
 ## Les titres et les cards (étape 5)
