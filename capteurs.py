@@ -5,7 +5,8 @@ ces chiffres en OSC à kikina.py.
     python capteurs.py            # fenêtre de contrôle + envoi OSC
     python capteurs.py --test     # autotest, sans caméra
 
-Touches dans la fenêtre : F = reprendre le fond (la salle vide, 5 s plus tard), Échap = quitter.
+Touches dans la fenêtre : F = reprendre le fond (la salle vide, 5 s plus tard), P = photo de ce que
+voit chaque caméra (dans captures/), Échap = quitter.
 
 Présence = ce qui diffère du fond (la salle vide). Mouvement = ce qui diffère de l'image d'avant.
 Les valeurs envoyées sont brutes : kikina.py les lisse.
@@ -48,7 +49,10 @@ def mesurer(gris, avant, fond, rect, c):
 
 
 def lister_cameras():
-    """[(nom, numéro pour OpenCV, pilote)] des caméras branchées."""
+    """[(nom, numéro pour OpenCV, pilote, identifiant)] des caméras branchées.
+
+    Le numéro change dès qu'on branche ou débranche une caméra : ne jamais le garder en mémoire.
+    """
     if sys.platform == "darwin":
         # La même liste et le même tri qu'OpenCV (cap_avfoundation_mac.mm), pour que le numéro
         # désigne bien la caméra de ce nom. Une liste faite autrement peut être décalée.
@@ -56,56 +60,62 @@ def lister_cameras():
         liste = AV.AVCaptureDevice.devicesWithMediaType_(AV.AVMediaTypeVideo).arrayByAddingObjectsFromArray_(
             AV.AVCaptureDevice.devicesWithMediaType_(AV.AVMediaTypeMuxed))
         liste = liste.sortedArrayUsingComparator_(lambda a, b: a.uniqueID().compare_(b.uniqueID()))
-        return [(str(a.localizedName()), i, cv2.CAP_AVFOUNDATION) for i, a in enumerate(liste)]
+        return [(str(a.localizedName()), i, cv2.CAP_AVFOUNDATION, str(a.uniqueID())) for i, a in enumerate(liste)]
     # Windows : un seul pilote, sinon chaque caméra apparaît deux fois. Pas encore essayé sur le PC.
     from cv2_enumerate_cameras import enumerate_cameras
-    return [(a.name, a.index, a.backend) for a in enumerate_cameras(cv2.CAP_MSMF)]
+    return [(a.name, a.index, a.backend, a.path) for a in enumerate_cameras(cv2.CAP_MSMF)]
 
 
 class Camera:
-    def __init__(self, nom, numero, pilote):
-        self.nom, self.numero, self.pilote = nom, numero, pilote
-        self.cap = None
-        self.avant = self.fond = None
-        self.fond_a = self.essai = self.vue = 0.0
-        self.ouvrir()
+    """Une caméra cherchée par son nom. Débranchée, on l'attend : on n'en ouvre jamais une autre à sa place."""
 
-    def ouvrir(self):
+    def __init__(self, cherche):
+        self.cherche = cherche
+        self.cap = self.identifiant = self.image = None
+        self.avant = self.fond = None
+        self.fond_a = self.essai = 0.0
+
+    def ouvrir(self, prises):
+        """Cherche la caméra par son nom et l'ouvre. `prises` : identifiants tenus par les autres caméras."""
         self.essai = time.monotonic()
-        self.cap = cv2.VideoCapture(self.numero, self.pilote)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        self.avant = self.fond = None
-        self.fond_a = time.monotonic() + DELAI_FOND
+        if self.cap is not None:
+            self.cap.release()
+        self.cap = self.identifiant = None
+        for nom, numero, pilote, identifiant in lister_cameras():
+            if self.cherche.lower() in nom.lower() and identifiant not in prises:
+                cap = cv2.VideoCapture(numero, pilote)
+                if not cap.isOpened():
+                    raise SystemExit(f"Caméra '{nom}' : impossible de l'ouvrir. macOS : Réglages Système > "
+                                     "Confidentialité et sécurité > Caméra, autoriser le Terminal, puis relancer.")
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                self.cap, self.identifiant = cap, identifiant
+                self.avant = self.fond = None
+                self.fond_a = time.monotonic() + DELAI_FOND
+                print(f"J'ouvre : {numero} {nom}")
+                return True
+        return False
 
-    def lire(self):
-        """Petite image grise, ou None si la caméra ne répond pas (on la rouvre toutes les 2 s)."""
-        ok, image = self.cap.read()
+    def lire(self, prises):
+        """Petite image grise, ou None si la caméra ne répond pas (on la recherche toutes les 2 s)."""
+        ok, image = self.cap.read() if self.cap is not None else (False, None)
         if ok:
-            self.vue = time.monotonic()
+            self.image = image
             return preparer(image)
         if time.monotonic() - self.essai > 2:
-            print(f"Caméra '{self.nom}' muette, nouvel essai...")
-            self.cap.release()
-            self.ouvrir()
+            print(f"Caméra '{self.cherche}' muette ou débranchée, je la cherche...")
+            self.ouvrir(prises)
         return None
 
 
 def ouvrir_cameras(c):
-    dispo = lister_cameras()
-    noms = " | ".join(f"{numero} {nom}" for nom, numero, _ in dispo) or "aucune"
+    noms = " | ".join(f"{numero} {nom}" for nom, numero, *_ in lister_cameras()) or "aucune"
     print(f"Caméras branchées : {noms}")
     cameras = []
     for k in c["camera"]:  # deux caméras du même nom : la 1re du fichier prend la 1re trouvée, etc.
-        trouve = next((a for a in dispo if k["nom"].lower() in a[0].lower()), None)
-        if trouve is None:
+        cam = Camera(k["nom"])
+        if not cam.ouvrir({a.identifiant for a in cameras}):
             raise SystemExit(f"Caméra '{k['nom']}' introuvable parmi les caméras branchées.")
-        dispo.remove(trouve)
-        cam = Camera(*trouve)
-        if not cam.cap.isOpened():
-            raise SystemExit(f"Caméra '{cam.nom}' : impossible de l'ouvrir. macOS : Réglages Système > "
-                             "Confidentialité et sécurité > Caméra, autoriser le Terminal, puis relancer.")
-        print(f"J'ouvre : {cam.numero} {cam.nom}")
         cameras.append(cam)
     return cameras
 
@@ -127,7 +137,7 @@ def dessiner(cam, gris, zones, mesures, c):
     if cam.fond is None:
         reste = max(0, cam.fond_a - time.monotonic())
         cv2.putText(vue, f"Sortez du champ : fond dans {reste:.0f} s", (10, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-    cv2.imshow(cam.nom, vue)
+    cv2.imshow(cam.cherche, vue)
 
 
 def lire_config():
@@ -139,7 +149,7 @@ def main():
     date_config = CONFIG.stat().st_mtime
     cameras = ouvrir_cameras(c)
     client = SimpleUDPClient(c["osc_adresse"], c["osc_port"])
-    print(f"OSC : envoi vers {c['osc_adresse']}:{c['osc_port']}. Touches : F = reprendre le fond, Échap = quitter.")
+    print(f"OSC : envoi vers {c['osc_adresse']}:{c['osc_port']}. Touches : F = reprendre le fond, P = photo, Échap = quitter.")
     dernier = affiche = time.monotonic()
     images = 0
     while True:
@@ -151,17 +161,23 @@ def main():
                 print(f"config.toml illisible, je garde les anciens réglages : {err}")
         maintenant = time.monotonic()
         dt, dernier = maintenant - dernier, maintenant
+        lues = 0
         envoi = {}  # zone : (présence, mouvement). Une zone vue par deux caméras : la plus forte gagne.
         # ponytail: caméras lues l'une après l'autre ; un fil par caméra si à 2 caméras on tombe sous 25 i/s
         for cam, k in zip(cameras, c["camera"]):
-            gris = cam.lire()
+            gris = cam.lire({a.identifiant for a in cameras if a is not cam})
             if gris is None:
+                if cam.cap is None:  # débranchée : on le dit dans la fenêtre, l'image ne reste pas figée
+                    noir = np.zeros((720, 960, 3), "u1")
+                    cv2.putText(noir, "Camera debranchee, je la cherche...", (40, 360), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2)
+                    cv2.imshow(cam.cherche, noir)
                 continue
+            lues += 1
             if cam.avant is None:
                 cam.avant = gris
             if cam.fond is None and maintenant >= cam.fond_a:
                 cam.fond = gris.copy()
-                print(f"Fond repris ('{cam.nom}')")
+                print(f"Fond repris ('{cam.cherche}')")
             mesures = {}
             if cam.fond is not None:
                 for n, rect in k["zones"].items():
@@ -174,7 +190,7 @@ def main():
         for n, (p, e) in envoi.items():
             client.send_message(f"/zone/{n}/presence", p)
             client.send_message(f"/zone/{n}/energie", e)
-        images += 1
+        images += lues > 0
         if maintenant - affiche >= 2:
             print(f"{images / (maintenant - affiche):4.1f} i/s   " +
                   "   ".join(f"zone {n} : présence {p:.2f} mouvement {e:.2f}" for n, (p, e) in sorted(envoi.items())))
@@ -182,12 +198,20 @@ def main():
         touche = cv2.waitKey(1) & 0xFF
         if touche == 27:
             break
+        if touche in (ord("p"), ord("P")):
+            for i, cam in enumerate(cameras):
+                if cam.image is not None:
+                    chemin = ICI / "captures" / f"camera{i + 1}_{time.strftime('%H%M%S')}.jpg"
+                    chemin.parent.mkdir(exist_ok=True)
+                    cv2.imwrite(str(chemin), cam.image)
+                    print(f"Photo : {chemin}")
         if touche in (ord("f"), ord("F")):
             for cam in cameras:
                 cam.fond, cam.fond_a = None, maintenant + DELAI_FOND
             print(f"Sortez du champ : fond repris dans {DELAI_FOND} s")
     for cam in cameras:
-        cam.cap.release()
+        if cam.cap is not None:
+            cam.cap.release()
 
 
 def autotest():
@@ -210,6 +234,30 @@ def autotest():
     assert p > 0.3 and e > 0.3, f"en mouvement : présence et mouvement, reçu {p:.2f} {e:.2f}"
     assert mesurer(bouge, immobile, fond, droite, c)[:2] == (0, 0), "la zone voisine ne doit rien voir"
     lire_config()  # le bloc [capteurs] de config.toml existe et se lit
+
+    # Une caméra débranchée est attendue. Les numéros se décalent : on n'ouvre jamais la voisine à sa place.
+    global lister_cameras
+    ouvertes = []
+
+    class Faux:
+        def __init__(self, numero, pilote):
+            ouvertes.append(numero)
+        isOpened = lambda self: True
+        set = release = lambda self, *a: None
+
+    vrais = cv2.VideoCapture, lister_cameras
+    cv2.VideoCapture = Faux
+    try:
+        lister_cameras = lambda: [("HD USB Camera", 0, 0, "usb"), ("FaceTime HD Camera", 1, 0, "mac")]
+        cam = Camera("usb cam")
+        assert cam.ouvrir(set()) and ouvertes == [0]
+        lister_cameras = lambda: [("FaceTime HD Camera", 0, 0, "mac")]  # débranchée : celle du Mac devient la n°0
+        assert not cam.ouvrir(set()) and ouvertes == [0] and cam.cap is None, "a ouvert une autre caméra"
+        lister_cameras = lambda: [("FaceTime HD Camera", 0, 0, "mac"), ("HD USB Camera", 1, 0, "usb2")]  # rebranchée ailleurs
+        assert cam.ouvrir(set()) and ouvertes == [0, 1]
+        assert not Camera("usb cam").ouvrir({"usb2"}), "deux caméras du même nom ont pris le même appareil"
+    finally:
+        cv2.VideoCapture, lister_cameras = vrais
     print("autotest OK")
 
 

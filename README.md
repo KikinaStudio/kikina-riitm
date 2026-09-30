@@ -141,6 +141,8 @@ cd "/Users/leon/RIITM final"
 Ce qu'on voit : l'image de la caméra en gris, un cadre jaune par zone avec deux chiffres de 0 à 1. **presence** = ce qui diffère de la salle vide (en bleu). **mouvement** = ce qui bouge (en blanc). Entre parenthèses : la part de la zone concernée, pour régler.
 
 - Au lancement, sortir du champ : le programme photographie la salle vide (le « fond ») au bout de 5 s. Touche **F** pour le reprendre (après avoir déplacé la caméra, posé le filtre, changé la lumière). Échap pour quitter.
+- Touche **P** : photo de ce que voit chaque caméra, dans `captures/` (pour dessiner les zones, ou pour me montrer l'image).
+- Une caméra débranchée est attendue et reprise toute seule quand elle revient (la fenêtre affiche « Camera debranchee »). Le programme n'ouvre jamais une autre caméra à sa place.
 - Réglages dans le bloc `[capteurs]` de `config.toml`, relus à chaud : `seuil` (à monter si l'image vide fourmille de bleu), `presence_pleine` et `energie_pleine` (à baisser si les chiffres ne montent pas assez), les rectangles des zones, `osc_adresse` (l'adresse de la machine du moteur si les caméras sont sur une autre).
 - Changer de caméra : mettre une partie de son nom dans `nom`. Si le nom est faux, le programme affiche la liste des caméras branchées. Deux caméras du même nom : deux blocs `[[capteurs.camera]]`, et si elles sont inversées, échanger leurs zones.
 

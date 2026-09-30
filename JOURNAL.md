@@ -31,6 +31,13 @@ L'écart CLAUDE.md / Notion noté le 24/09 est tranché par le matériel : camé
 - Windows : le choix de la caméra par nom n'a pas été essayé sur le PC (étape 1 bis toujours pas faite).
 - Étape 5 (cards) toujours pas validée formellement.
 
+### Essai de Jérémie avec la vraie caméra (30/09, après-midi)
+- La chaîne marche : caméra USB -> `capteurs.py` -> OSC -> le moteur agite les zones 1 et 2 et déclenche leurs cards.
+- **La caméra USB décroche** : image qui clignote, « caméra muette » trois fois en la manipulant, puis le Mac ne la voit plus du tout (`Caméras branchées : FaceTime | Nokia`). C'est un problème de branchement ou de matériel (câble, adaptateur USB-C, rallonge, connecteur côté caméra), pas de code. **À résoudre avant la salle** : essayer sans rallonge, autre port, autre adaptateur, et la deuxième caméra.
+- Vraie cause de « ça bascule sur la caméra du MacBook » : à chaque décrochage le programme rouvrait le même numéro, or les numéros se décalent quand une caméra disparaît (la caméra du Mac devenait la n°0). Corrigé : la caméra est recherchée par son nom à chaque reconnexion, et attendue si elle est absente. Vérifié par l'autotest et par une fausse caméra débranchée 4 s. La correction précédente (liste faite comme OpenCV) ne visait pas la bonne cause, elle reste inoffensive.
+- Touche P ajoutée : photo de ce que voit chaque caméra dans `captures/`.
+- Les chiffres de cet essai ne valent rien pour régler les seuils : fond pris avec Jérémie dans le champ, caméra en main, et la fin de l'essai venait de la caméra du Mac.
+
 ### Comment relancer
 ```bash
 cd "/Users/leon/RIITM final"
