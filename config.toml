@@ -123,3 +123,20 @@ creux_bord_px = 15         # le bord de la coupure, en fondu
 fond = 0.07               # lumière du panneau de la colonne (0 = simple coupure noire)
 portee_px = 150            # distance d'où la matière est aspirée dans la colonne (puis y revient)
 condensation = 0.25        # vitesse de cette aspiration
+
+# ---------------------------------------------------------------------------
+# Les capteurs (étape 4) : le programme capteurs.py, séparé du moteur. Se recharge à chaud,
+# sauf la liste des caméras (relancer capteurs.py).
+[capteurs]
+osc_adresse = "127.0.0.1"  # la machine où tourne kikina.py (127.0.0.1 = la même)
+osc_port = 7000
+seuil = 10                 # écart de gris (0 à 255) pour qu'un point compte ; monter si l'image vide fourmille de bleu
+presence_pleine = 0.10     # part de la zone qui diffère du fond (salle vide) pour une présence de 1
+energie_pleine = 0.03      # part de la zone qui change d'une image à l'autre pour un mouvement de 1
+fond_s = 120               # le fond suit lentement l'image (lumière qui dérive). 0 = fond fixe. Touche F : le reprendre
+
+# Une caméra : une partie de son nom, et ses zones. Une zone = un rectangle dans l'image de la
+# caméra [gauche, haut, droite, bas], de 0 à 1. Test au bureau : moitié gauche = zone 1, moitié droite = zone 2.
+[[capteurs.camera]]
+nom = "HD USB Camera"
+zones = { 1 = [0.0, 0.0, 0.5, 1.0], 2 = [0.5, 0.0, 1.0, 1.0] }

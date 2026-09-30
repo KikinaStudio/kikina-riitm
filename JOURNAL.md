@@ -4,6 +4,41 @@
 
 ---
 
+## 30 septembre 2026 - Étape 4 : les caméras (premier essai au bureau, à valider par Jérémie)
+
+### Matériel reçu
+2 caméras USB ELP 1080p fisheye 170° (vues par le Mac sous le nom `HD USB Camera`), 2 filtres Hoya R72 52 mm (ne laissent passer que l'infrarouge), 2 projecteurs infrarouges JC 20 LED 90°, 1 rallonge USB. Accès à la salle le 1er octobre.
+
+L'écart CLAUDE.md / Notion noté le 24/09 est tranché par le matériel : caméras simples, pas de profondeur ni de squelette. On mesure présence et mouvement par zone, comme prévu dans CLAUDE.md.
+
+### Ce qui a été fait
+- `capteurs.py` (nouveau), programme séparé du moteur : lit les caméras choisies par nom, mesure par zone la **présence** (écart au fond, la salle vide) et le **mouvement** (écart à l'image d'avant), envoie `/zone/N/presence` et `/zone/N/energie` en OSC. Fenêtre de contrôle (bleu = diffère du fond, blanc = bouge). Touche F = reprendre le fond. Si une caméra se débranche, il la rouvre toutes les 2 s.
+- Bloc `[capteurs]` dans `config.toml`, relu à chaud. Une zone = un rectangle dans l'image d'une caméra. Pour le bureau : une caméra, moitié gauche = zone 1, moitié droite = zone 2.
+- Le fond suit lentement l'image (`fond_s = 120`) : une lumière qui dérive ne reste pas comptée comme quelqu'un. Revers : une personne parfaitement immobile 2 à 3 minutes finit par disparaître.
+- Nouvelles bibliothèques : `opencv-python`, `cv2_enumerate_cameras` (donne le nom des caméras sur Mac et Windows).
+
+### Ce qui marche
+- Autotest (`python capteurs.py --test`) : le grain seul ne déclenche rien, une silhouette immobile donne de la présence sans mouvement, en mouvement les deux, la zone voisine ne voit rien.
+- Boucle complète essayée avec une fausse caméra : les bons messages OSC arrivent.
+
+### Ce qui reste fragile
+- **Pas encore essayé avec la vraie caméra** : macOS refuse la caméra aux programmes que je lance moi-même. C'est Jérémie qui le lance depuis le Terminal.
+- Pas encore vérifié : que la caméra voit bien l'infrarouge à travers le R72, que la projection n'est pas vue, que les projecteurs IR s'allument (cellule qui ne les allume que dans le noir, alimentation 12 V).
+- 2 caméras pour 4 zones : chaque caméra devra voir 2 zones. Emplacement à trouver sur place, rectangles à régler dans `config.toml`.
+- Une seule rallonge USB, et l'USB ne dépasse pas 5 m sans rallonge active : à regarder selon l'emplacement de la machine.
+- Les seuils sont réglés à l'aveugle. À refaire sur place, dans le noir, avec la projection.
+- Windows : le choix de la caméra par nom n'a pas été essayé sur le PC (étape 1 bis toujours pas faite).
+- Étape 5 (cards) toujours pas validée formellement.
+
+### Comment relancer
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/python kikina.py          # fenêtre 1 du Terminal
+.venv/bin/python capteurs.py        # fenêtre 2 du Terminal
+```
+
+---
+
 ## 24 septembre 2026 - Cards : marges, et où on en est (à relire en début de prochaine session)
 
 ### Ce qui a été fait

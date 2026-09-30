@@ -4,6 +4,7 @@ Ce dossier produit un flux vidéo NDI nommé `KIKINA` (le bandeau 360 de la sall
 - `kikina.py` : le moteur visuel (la matière, qui écoute la musique et les zones).
 - `entrees.py` : l'écoute du son et des capteurs (OSC). `python entrees.py` lance son autotest.
 - `cartes.py` : les titres des ateliers et les cards. `python cartes.py` vérifie leur placement et dessine `captures/plan_cards.png`.
+- `capteurs.py` : les caméras. Programme à part, qui envoie la présence et le mouvement de chaque zone au moteur. `python capteurs.py --test` lance son autotest.
 - `test_ndi.py` : le test du tuyau NDI, à relancer sur chaque nouvelle machine.
 
 Le "Terminal" (macOS) ou "PowerShell" (Windows) est la fenêtre où l'on tape des commandes.
@@ -125,6 +126,23 @@ Tester l'OSC sans capteur, pendant que `kikina.py` tourne (la zone 3 s'agite pen
 ```bash
 .venv/bin/python -c "from pythonosc.udp_client import SimpleUDPClient as C; C('127.0.0.1', 7000).send_message('/zone/3/energie', 1.0)"
 ```
+
+## Les caméras (étape 4)
+
+Matériel : caméras USB sensibles à l'infrarouge, un filtre R72 devant l'objectif (il bloque la lumière visible, donc la projection), des projecteurs infrarouges qui éclairent les visiteurs d'une lumière que l'oeil ne voit pas.
+
+Lancer, dans une deuxième fenêtre de Terminal, pendant que `kikina.py` tourne :
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/python capteurs.py
+```
+(Windows : `.venv\Scripts\python capteurs.py`.) macOS, la première fois : autoriser le Terminal à utiliser la caméra, puis relancer.
+
+Ce qu'on voit : l'image de la caméra en gris, un cadre jaune par zone avec deux chiffres de 0 à 1. **presence** = ce qui diffère de la salle vide (en bleu). **mouvement** = ce qui bouge (en blanc). Entre parenthèses : la part de la zone concernée, pour régler.
+
+- Au lancement, sortir du champ : le programme photographie la salle vide (le « fond ») au bout de 5 s. Touche **F** pour le reprendre (après avoir déplacé la caméra, posé le filtre, changé la lumière). Échap pour quitter.
+- Réglages dans le bloc `[capteurs]` de `config.toml`, relus à chaud : `seuil` (à monter si l'image vide fourmille de bleu), `presence_pleine` et `energie_pleine` (à baisser si les chiffres ne montent pas assez), les rectangles des zones, `osc_adresse` (l'adresse de la machine du moteur si les caméras sont sur une autre).
+- Changer de caméra : mettre une partie de son nom dans `nom`. Si le nom est faux, le programme affiche la liste des caméras branchées. Deux caméras du même nom : deux blocs `[[capteurs.camera]]`, et si elles sont inversées, échanger leurs zones.
 
 ## Les titres et les cards (étape 5)
 
