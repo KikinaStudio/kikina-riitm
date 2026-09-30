@@ -6,7 +6,8 @@ ces chiffres en OSC à kikina.py.
     python capteurs.py --test     # autotest, sans caméra
 
 Touches dans la fenêtre : F = reprendre le fond (la salle vide, 5 s plus tard), P = photo de ce que
-voit chaque caméra (dans captures/), Échap = quitter.
+voit chaque caméra (dans captures/), S = série de 10 photos, une par seconde (le temps d'aller se placer
+dans le champ), Échap = quitter.
 
 Présence = ce qui diffère du fond (la salle vide). Mouvement = ce qui diffère de l'image d'avant.
 Atelier Accueil : des bandes au sol à franchir dans l'ordre, chacune envoie `/accueil/pas` 1, 2, 3.
@@ -145,6 +146,7 @@ class Camera:
     def __init__(self, cherche, ips=30):
         self.cherche, self.ips = cherche, ips
         self.figee = False
+        self.retournee = False  # caméra fixée tête en bas : on remet l'image à l'endroit
         self.pas, self.touchees = Pas(), []
         self.cap = self.identifiant = self.image = None
         self.avant = self.fond = None
@@ -184,8 +186,8 @@ class Camera:
         """Petite image grise, ou None si la caméra ne répond pas (on la recherche toutes les 2 s)."""
         ok, image = self.cap.read() if self.cap is not None else (False, None)
         if ok:
-            self.image = image
-            return preparer(image)
+            self.image = cv2.rotate(image, cv2.ROTATE_180) if self.retournee else image
+            return preparer(self.image)
         if time.monotonic() - self.essai > 2:
             print(f"Caméra '{self.cherche}' muette ou débranchée, je la cherche...")
             self.ouvrir(prises)
@@ -238,7 +240,7 @@ def main():
     date_config = CONFIG.stat().st_mtime
     cameras = ouvrir_cameras(c)
     clients = [SimpleUDPClient(v.rsplit(":", 1)[0], int(v.rsplit(":", 1)[1])) for v in c["osc_vers"]]
-    print(f"OSC : envoi vers {', '.join(c['osc_vers'])}. Touches : F = reprendre le fond, P = photo, Échap = quitter.")
+    print(f"OSC : envoi vers {', '.join(c['osc_vers'])}. Touches : F = reprendre le fond, P = photo, S = série de 10 photos, Échap = quitter.")
 
     def envoyer(adresse, valeur):
         for client in clients:
@@ -246,6 +248,16 @@ def main():
 
     dernier = affiche = time.monotonic()
     images = 0
+    serie_fin = serie_suivante = 0.0
+
+    def photo():
+        for i, cam in enumerate(cameras):
+            if cam.image is not None:
+                chemin = ICI / "captures" / f"camera{i + 1}_{time.strftime('%H%M%S')}.jpg"
+                chemin.parent.mkdir(exist_ok=True)
+                cv2.imwrite(str(chemin), cam.image)
+                print(f"Photo : {chemin}")
+
     while True:
         if CONFIG.stat().st_mtime != date_config:  # réglages relus à chaud (sauf la liste des caméras)
             date_config = CONFIG.stat().st_mtime
@@ -259,6 +271,7 @@ def main():
         envoi = {}  # zone : (présence, mouvement). Une zone vue par deux caméras : la plus forte gagne.
         # ponytail: caméras lues l'une après l'autre ; un fil par caméra si à 2 caméras on tombe sous 25 i/s
         for cam, k in zip(cameras, c["camera"]):
+            cam.retournee = k.get("retournee", False)
             gris = cam.lire({a.identifiant for a in cameras if a is not cam})
             if gris is None:
                 if cam.cap is None:  # débranchée : on le dit dans la fenêtre, l'image ne reste pas figée
@@ -307,12 +320,13 @@ def main():
         if touche == 27:
             break
         if touche in (ord("p"), ord("P")):
-            for i, cam in enumerate(cameras):
-                if cam.image is not None:
-                    chemin = ICI / "captures" / f"camera{i + 1}_{time.strftime('%H%M%S')}.jpg"
-                    chemin.parent.mkdir(exist_ok=True)
-                    cv2.imwrite(str(chemin), cam.image)
-                    print(f"Photo : {chemin}")
+            photo()
+        if touche in (ord("s"), ord("S")):
+            serie_fin, serie_suivante = maintenant + 10, maintenant
+            print("Série : une photo par seconde pendant 10 s")
+        if maintenant < serie_fin and maintenant >= serie_suivante:
+            serie_suivante += 1
+            photo()
         if touche in (ord("f"), ord("F")):
             for cam in cameras:
                 cam.fond, cam.fond_a = None, maintenant + DELAI_FOND

@@ -141,7 +141,8 @@ cd "/Users/leon/RIITM final"
 Ce qu'on voit : l'image de la caméra en gris, un cadre jaune par zone avec deux chiffres de 0 à 1. **presence** = ce qui diffère de la salle vide (en bleu). **mouvement** = ce qui bouge (en blanc). Entre parenthèses : la part de la zone concernée, pour régler.
 
 - Au lancement, sortir du champ : le programme photographie la salle vide (le « fond ») au bout de 5 s. Touche **F** pour le reprendre (après avoir déplacé la caméra, posé le filtre, changé la lumière). Échap pour quitter.
-- Touche **P** : photo de ce que voit chaque caméra, dans `captures/` (pour dessiner les zones, ou pour me montrer l'image).
+- Touche **P** : photo de ce que voit chaque caméra, dans `captures/` (pour dessiner les zones, ou pour me montrer l'image). Touche **S** : une photo par seconde pendant 10 s, le temps d'aller se placer dans le champ.
+- Caméra fixée tête en bas : `retournee = true` dans son bloc, l'image est remise à l'endroit.
 - Une caméra débranchée est attendue et reprise toute seule quand elle revient (la fenêtre affiche « Camera debranchee »). Le programme n'ouvre jamais une autre caméra à sa place.
 - Réglages dans le bloc `[capteurs]` de `config.toml`, relus à chaud : `seuil` (à monter si l'image vide fourmille de bleu), `presence_pleine` et `energie_pleine` (à baisser si les chiffres ne montent pas assez), les rectangles des zones, `osc_vers` (à qui envoyer les chiffres : le moteur, et la machine d'Arthur, sous la forme `"adresse:port"` ; relancer après un changement).
 - La caméra est réglée à 30 images/seconde (`ips`) et son exposition (sa luminosité) est figée juste avant la photo du fond (`exposition_figee`). La console affiche `lumière 60-62` : le plus sombre et le plus clair des 2 dernières secondes. Pièce vide, les deux nombres doivent rester proches. Mac seulement pour l'instant.
