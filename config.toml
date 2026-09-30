@@ -142,3 +142,8 @@ fond_s = 120               # le fond suit lentement l'image (lumière qui dériv
 [[capteurs.camera]]
 nom = "HD USB Camera"
 zones = { 1 = [0.0, 0.0, 0.5, 1.0], 2 = [0.5, 0.0, 1.0, 1.0] }
+
+# Deuxième caméra (même nom : la 1re du fichier prend la 1re branchée). Enlever les # pour l'activer, puis relancer.
+# [[capteurs.camera]]
+# nom = "HD USB Camera"
+# zones = { 3 = [0.0, 0.0, 0.5, 1.0], 4 = [0.5, 0.0, 1.0, 1.0] }
