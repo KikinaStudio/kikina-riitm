@@ -72,6 +72,11 @@ L'écart CLAUDE.md / Notion noté le 24/09 est tranché par le matériel : camé
 - Ajouts : `retournee` par caméra (image remise à l'endroit), touche S (10 photos, une par seconde).
 - Piège : la chaise de Jérémie est dans les bandes. Le fond doit être pris sans lui dans le champ, sinon son absence « touche » les bandes.
 
+### Les 3 pas marchent de bout en bout (30/09, 18 h 01)
+- Bandes placées sur la photo, fond pris pièce vide (délai porté à 10 s, `fond_delai_s`) : Jérémie entre par la porte, `capteurs.py` affiche `Pas 1`, `Pas 2`, `Pas 3`, le moteur affiche `pas 1`, `pas 2`, `pas 3`. Anneaux pas encore confirmés à l'oeil par Jérémie.
+- Échec juste avant, à retenir : fond pris avec Jérémie assis dans la bande 3. Son départ laisse la bande « touchée » en permanence, rien ne se réarme. Dans la salle : lancer et appuyer sur F avec la zone d'entrée vide, ne rien déplacer dans les bandes ensuite.
+- Rendu du moteur sur secteur : 11 à 14 ms seul, environ 21 ms quand `capteurs.py` tourne à côté sur le même Mac (limite 33). À surveiller avec 2 caméras.
+
 ### Comment relancer
 ```bash
 cd "/Users/leon/RIITM final"
