@@ -60,6 +60,11 @@ L'écart CLAUDE.md / Notion noté le 24/09 est tranché par le matériel : camé
 - Limites connues : bandes = rectangles droits (le fisheye courbe le sol) ; une ombre portée peut toucher une bande avant le pied ; si la caméra voit le visiteur de dos, son corps couvre toutes les bandes d'un coup et rien ne part.
 - À faire : dessiner les bandes sur une photo (touche P) une fois la caméra posée face à l'entrée ; donner à Arthur l'adresse `/accueil/pas` et lui demander son adresse et son port.
 
+### Points ouverts en fin de journée du 30/09
+- Le moteur reçoit bien `/accueil/pas` (console : `pas 1`, `pas 2`, `pas 3`). Anneaux pas encore vus par Jérémie, bandes pas encore placées sur une vraie image.
+- **La caméra USB a de nouveau disparu du Mac** (15 h 40 environ) : absente de la liste des caméras ET du bus USB (seul un hub USB 3 apparaît). Deuxième fois de la journée. Cause physique : câble, rallonge, adaptateur ou hub. À élucider avant la salle (essayer sans rallonge, puis avec ; si la rallonge est en cause, il faut une rallonge USB active).
+- **Rendu à 24-31 ms** (limite 33) quand le Mac est sur batterie en mode économie d'énergie (31 %). À revérifier sur secteur. Le jour J : secteur obligatoire, mode économie d'énergie coupé.
+
 ### Comment relancer
 ```bash
 cd "/Users/leon/RIITM final"
