@@ -65,6 +65,13 @@ L'écart CLAUDE.md / Notion noté le 24/09 est tranché par le matériel : camé
 - **La caméra USB a de nouveau disparu du Mac** (15 h 40 environ) : absente de la liste des caméras ET du bus USB (seul un hub USB 3 apparaît). Deuxième fois de la journée. Cause physique : câble, rallonge, adaptateur ou hub. À élucider avant la salle (essayer sans rallonge, puis avec ; si la rallonge est en cause, il faut une rallonge USB active).
 - **Rendu à 24-31 ms** (limite 33) quand le Mac est sur batterie en mode économie d'énergie (31 %). À revérifier sur secteur. Le jour J : secteur obligatoire, mode économie d'énergie coupé.
 
+### Premier essai réel des pas (30/09, 17 h 40)
+- La caméra est revenue après rebranchement de l'adaptateur (c'était bien le branchement).
+- Jérémie a posé la caméra en hauteur, à l'endroit, face à la porte du bureau, et est entré deux fois : `Pas 1`, `Pas 2`, `Pas 3` les deux fois, dans l'ordre, et rien entre les deux passages. C'était avec les bandes par défaut (posées au hasard au milieu de l'image, qui tombaient à peu près sur son trajet) : la logique marche avec une vraie personne, le placement restait à faire.
+- Bandes replacées sur la photo de 17 h 40 (`captures/camera1_174014.jpg`), de la porte vers le bureau. Attention : j'avais d'abord placé des bandes et activé `retournee` d'après une photo prise AVANT qu'il déplace la caméra. Toujours vérifier l'heure de la photo avant de dessiner.
+- Ajouts : `retournee` par caméra (image remise à l'endroit), touche S (10 photos, une par seconde).
+- Piège : la chaise de Jérémie est dans les bandes. Le fond doit être pris sans lui dans le champ, sinon son absence « touche » les bandes.
+
 ### Comment relancer
 ```bash
 cd "/Users/leon/RIITM final"
