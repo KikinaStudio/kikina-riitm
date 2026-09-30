@@ -101,6 +101,8 @@ octaves = [2.5, 5.5]       # octave qui va en bas du mur, octave qui va en haut 
 plages = [[0, 5186], [5186, 7321], [7321, 12311], [12311, 14446]]
 presence_force = 0.25      # agitation d'une présence immobile (le mouvement va jusqu'à 1)
 presence_s = 1             # lissage de la présence
+pas_x = [2450, 2700, 2950] # atelier Accueil : où naît l'anneau de chaque pas sur le bandeau (px, largeur de référence 14446). À caler sur place
+pas_y = 0.8                # hauteur de ces anneaux (0 = haut du mur, 1 = bas)
 
 # ---------------------------------------------------------------------------
 # Les titres des ateliers et les cards (étape 5). Se recharge à chaud.
@@ -128,13 +130,14 @@ condensation = 0.25        # vitesse de cette aspiration
 # Les capteurs (étape 4) : le programme capteurs.py, séparé du moteur. Se recharge à chaud,
 # sauf la liste des caméras (relancer capteurs.py).
 [capteurs]
-osc_adresse = "127.0.0.1"  # la machine où tourne kikina.py (127.0.0.1 = la même)
-osc_port = 7000
+osc_vers = ["127.0.0.1:7000"]  # où envoyer les chiffres : kikina.py (127.0.0.1 = cette machine), plus la machine d'Arthur, ex. "192.168.1.20:9000". Relancer après un changement.
 seuil = 10                 # écart de gris (0 à 255) pour qu'un point compte ; monter si l'image vide fourmille de bleu
 presence_pleine = 0.10     # part de la zone qui diffère du fond (salle vide) pour une présence de 1
 energie_pleine = 0.03      # part de la zone qui change d'une image à l'autre pour un mouvement de 1
 ips = 30                   # cadence demandée à la caméra (elle sait aller à 120, mais l'image clignote sous un éclairage secteur)
 exposition_figee = true    # la caméra règle sa luminosité pendant les 5 s avant le fond, puis n'y touche plus (touche F : recommencer)
+pas_seuil = 0.2            # atelier Accueil : part d'une bande qui doit différer du fond pour dire "un pied est dessus"
+pas_vide_s = 1.5           # bandes vides depuis ce temps : prêt pour la personne suivante
 fond_s = 120               # le fond suit lentement l'image (lumière qui dérive). 0 = fond fixe. Touche F : le reprendre
 
 # Une caméra : une partie de son nom, et ses zones. Une zone = un rectangle dans l'image de la
@@ -142,6 +145,9 @@ fond_s = 120               # le fond suit lentement l'image (lumière qui dériv
 [[capteurs.camera]]
 nom = "HD USB Camera"
 zones = { 1 = [0.0, 0.0, 0.5, 1.0], 2 = [0.5, 0.0, 1.0, 1.0] }
+# Atelier Accueil : les bandes au sol, dans l'ordre où le visiteur les franchit (mêmes rectangles de 0 à 1).
+# Elles doivent se toucher, et la caméra doit voir le visiteur venir vers elle : la bande 1 est la plus haute dans l'image.
+pas = [[0.25, 0.45, 0.75, 0.60], [0.25, 0.60, 0.75, 0.78], [0.25, 0.78, 0.75, 1.0]]
 
 # Deuxième caméra (même nom : la 1re du fichier prend la 1re branchée). Enlever les # pour l'activer, puis relancer.
 # [[capteurs.camera]]

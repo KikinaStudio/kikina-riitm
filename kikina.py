@@ -356,6 +356,12 @@ class Kikina(mglw.WindowConfig):
             bas, haut = mus["octaves"]
             y = 1 - (math.log2(max(freq, 1.0) / 16.35) - bas) / (haut - bas)  # grave en bas, aigu en haut
             self.ondes.append([x * self.aspect, min(0.92, max(0.08, y)), 0.0, force])
+        z = self.cfg["zones"]
+        while self.entrees.pas:  # atelier Accueil : chaque pas fait naître un anneau à sa place sur le mur
+            n = self.entrees.pas.popleft()
+            if 1 <= n <= len(z["pas_x"]):
+                self.ondes.append([z["pas_x"][n - 1] / LARGEUR_REF * self.aspect, z["pas_y"], 0.0, 1.0])
+                print(f"pas {n}")
         tableau = np.zeros((8, 4), dtype="f4")
         if self.ondes:
             tableau[:len(self.ondes)] = self.ondes

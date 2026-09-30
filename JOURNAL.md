@@ -52,6 +52,14 @@ L'écart CLAUDE.md / Notion noté le 24/09 est tranché par le matériel : camé
 - Un ancien `capteurs.py` lancé à 14 h 36 tournait encore en même temps que le nouveau (il envoyait aussi ses chiffres au moteur, depuis la caméra du MacBook). Je l'ai arrêté. Toujours quitter avec Échap avant de relancer.
 - Les chiffres de cet essai ne valent rien pour régler les seuils : fond pris avec Jérémie dans le champ, caméra en main, et la fin de l'essai venait de la caméra du Mac.
 
+### Les 3 premiers pas, voie A (30/09, décidé par Jérémie)
+- `capteurs.py` : dans le bloc d'une caméra, `pas` = des bandes au sol (rectangles dans l'image, en vert dans la fenêtre). Classe `Pas` : première bande touchée = la n°1 seule, puis une note par bande plus loin, servi après la dernière, réarmé quand les bandes sont vides depuis `pas_vide_s`, rien pour quelqu'un qui revient de la salle. Envoi `/accueil/pas` 1, 2, 3.
+- Envoi vers plusieurs machines : `osc_vers = ["adresse:port", ...]` remplace `osc_adresse` et `osc_port` (le moteur + Arthur).
+- Moteur : `/accueil/pas` fait naître un anneau sur le mur 1 aux positions `pas_x` (`[zones]`), hauteur `pas_y`. Positions posées au hasard après la porte, à caler sur place.
+- Vérifié : autotest de `Pas` (aller, retour, enjambée, personne suivante), boucle complète avec une fausse personne qui avance puis recule (3 messages à l'aller, rien au retour), moteur hors fenêtre (3 pas = 3 anneaux aux bons x). **Pas encore vu avec la vraie caméra ni dans le vrai moteur** (ceux de Jérémie tournaient avec l'ancien code).
+- Limites connues : bandes = rectangles droits (le fisheye courbe le sol) ; une ombre portée peut toucher une bande avant le pied ; si la caméra voit le visiteur de dos, son corps couvre toutes les bandes d'un coup et rien ne part.
+- À faire : dessiner les bandes sur une photo (touche P) une fois la caméra posée face à l'entrée ; donner à Arthur l'adresse `/accueil/pas` et lui demander son adresse et son port.
+
 ### Comment relancer
 ```bash
 cd "/Users/leon/RIITM final"

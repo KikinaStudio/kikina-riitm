@@ -110,6 +110,7 @@ class Entrees:
         self._zones = {}                        # (mesure, zone) : (valeur, date de réception)
         self._densite, self._densite_date = 0.0, -1e9
         self.en_route = deque()                 # simulateur : (moment où on l'entendra, force, Hz)
+        self.pas = deque(maxlen=16)             # pas de l'atelier Accueil reçus en OSC (1, 2, 3), lus par kikina.py
         if e["simulateur"]:
             self.son, sr = lire_wav(ICI / e["son_test"])
             self.pos = 0
@@ -148,6 +149,10 @@ class Entrees:
         self.analyse.bloc(entree.mean(axis=1))
 
     def _osc(self, adresse, *valeurs):
+        if adresse == "/accueil/pas":           # un pas de l'atelier Accueil : son numéro (1, 2, 3)
+            if valeurs and isinstance(valeurs[0], (int, float)):
+                self.pas.append(int(valeurs[0]))
+            return
         try:
             v = min(1.0, max(0.0, float(valeurs[0])))
         except (IndexError, TypeError, ValueError):
@@ -215,7 +220,7 @@ if __name__ == "__main__":  # autotest
     assert dense > calme + 3, "le volume ne monte pas dans la partie dense"
 
     ent = Entrees.__new__(Entrees)  # juste la partie OSC, sans le son
-    ent._zones, ent._densite, ent._densite_date = {}, 0.0, -1e9
+    ent._zones, ent._densite, ent._densite_date, ent.pas = {}, 0.0, -1e9, deque()
     disp = Dispatcher()
     disp.set_default_handler(ent._osc)
     serveur = ThreadingOSCUDPServer(("127.0.0.1", 0), disp)
@@ -225,10 +230,12 @@ if __name__ == "__main__":  # autotest
     client.send_message("/zone/2/energie", 0.7)
     client.send_message("/zone/9/energie", 1.0)   # zone inconnue : ignorée
     client.send_message("/music/densite", 3.0)    # borné à 1
+    client.send_message("/accueil/pas", 2)
     time.sleep(0.3)
     assert abs(ent.zone("energie", 1) - 0.7) < 1e-6 and ent.zone("energie", 0) == 0
     ent._zones["energie", 1] = (0.7, time.monotonic() - 4)   # capteur muet depuis 4 s : retombe à 0
     assert ent.zone("energie", 1) == 0
     assert ent.densite() == 1.0, ent.densite()
+    assert list(ent.pas) == [2], ent.pas
     serveur.shutdown()
     print("autotest OK")

@@ -73,6 +73,7 @@ La mire est dans `assets/mire_club_immersif_14446x760.jpg`.
 Tout arrive en OSC, port 7000 (à confirmer avec Arthur), valeurs de 0 à 1 :
 - `/zone/N/presence` et `/zone/N/energie`, N de 1 à 4
 - `/music/densite` et `/music/couche/N`
+- `/accueil/pas` (1, 2 ou 3) : les 3 premiers pas de l'atelier Accueil, envoyés par `capteurs.py` au moteur et à Arthur (décidé le 30/09 : 3 bandes au sol dans l'image de la caméra, pas de squelette)
 - Plus une entrée audio stéréo (mix d'Arthur) : niveau, graves, médiums, aigus, attaques.
 
 Règles :

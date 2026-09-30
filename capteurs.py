@@ -9,6 +9,7 @@ Touches dans la fenêtre : F = reprendre le fond (la salle vide, 5 s plus tard),
 voit chaque caméra (dans captures/), Échap = quitter.
 
 Présence = ce qui diffère du fond (la salle vide). Mouvement = ce qui diffère de l'image d'avant.
+Atelier Accueil : des bandes au sol à franchir dans l'ordre, chacune envoie `/accueil/pas` 1, 2, 3.
 Les valeurs envoyées sont brutes : kikina.py les lisse.
 """
 import sys
@@ -40,12 +41,50 @@ def decoupe(image, rect):
     return np.s_[int(y0 * h):max(int(y1 * h), int(y0 * h) + 1), int(x0 * w):max(int(x1 * w), int(x0 * w) + 1)]
 
 
+def part(gris, reference, rect, seuil):
+    """Part du rectangle (0 à 1) qui diffère de l'image de référence."""
+    z = decoupe(gris, rect)
+    return float((np.abs(gris[z] - reference[z]) > seuil).mean())
+
+
 def mesurer(gris, avant, fond, rect, c):
     """(présence, mouvement) de 0 à 1 dans un rectangle, plus les parts brutes de la zone qui ont changé."""
-    z = decoupe(gris, rect)
-    la = float((np.abs(gris[z] - fond[z]) > c["seuil"]).mean())
-    bouge = float((np.abs(gris[z] - avant[z]) > c["seuil"]).mean())
+    la, bouge = part(gris, fond, rect, c["seuil"]), part(gris, avant, rect, c["seuil"])
     return min(1.0, la / c["presence_pleine"]), min(1.0, bouge / c["energie_pleine"]), la, bouge
+
+
+class Pas:
+    """Atelier Accueil : les premiers pas. Des bandes au sol, à franchir dans l'ordre, une personne à la fois.
+
+    Bandes vides depuis `vide_s` secondes : prêt. La première bande touchée doit être la n°1, seule
+    (sinon c'est quelqu'un qui revient de la salle : ignoré). Ensuite chaque bande plus loin qui est
+    touchée donne un pas. Après la dernière, la personne est servie : plus rien tant que les bandes
+    ne se sont pas vidées.
+    """
+
+    def __init__(self):
+        self.prochaine = 0        # bande attendue (0 = la première) ; None = on attend que les bandes se vident
+        self.vide_depuis = None
+
+    def avancer(self, touchees, maintenant, vide_s):
+        """touchees : vrai ou faux pour chaque bande. Renvoie le pas qui vient d'être fait (1, 2, 3...), ou 0."""
+        if not any(touchees):
+            if self.vide_depuis is None:
+                self.vide_depuis = maintenant
+            if maintenant - self.vide_depuis >= vide_s:
+                self.prochaine = 0
+            return 0
+        self.vide_depuis = None
+        if self.prochaine is None:
+            return 0
+        if self.prochaine == 0 and any(touchees[1:]):  # arrivée à l'envers, ou plusieurs bandes d'un coup
+            self.prochaine = None
+            return 0
+        for i in range(len(touchees) - 1, self.prochaine - 1, -1):  # la plus lointaine : une enjambée peut sauter une bande
+            if touchees[i]:
+                self.prochaine = i + 1 if i + 1 < len(touchees) else None
+                return i + 1
+        return 0
 
 
 def lister_cameras():
@@ -106,6 +145,7 @@ class Camera:
     def __init__(self, cherche, ips=30):
         self.cherche, self.ips = cherche, ips
         self.figee = False
+        self.pas, self.touchees = Pas(), []
         self.cap = self.identifiant = self.image = None
         self.avant = self.fond = None
         self.fond_a = self.essai = 0.0
@@ -128,6 +168,7 @@ class Camera:
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
                 self.cap, self.identifiant = cap, identifiant
                 self.avant = self.fond = None
+                self.pas, self.touchees = Pas(), []
                 self.fond_a = time.monotonic() + DELAI_FOND
                 print(f"J'ouvre : {numero} {nom}")
                 self.exposition(False)
@@ -163,8 +204,8 @@ def ouvrir_cameras(c):
     return cameras
 
 
-def dessiner(cam, gris, zones, mesures, c):
-    """Image de contrôle : en bleu ce qui diffère du fond, en blanc ce qui bouge."""
+def dessiner(cam, gris, zones, mesures, c, bandes=()):
+    """Image de contrôle : en bleu ce qui diffère du fond, en blanc ce qui bouge, en vert les bandes des pas."""
     vue = cv2.cvtColor(gris.astype("u1"), cv2.COLOR_GRAY2BGR)
     if cam.fond is not None:
         vue[np.abs(gris - cam.fond) > c["seuil"]] = (255, 120, 0)
@@ -177,6 +218,11 @@ def dessiner(cam, gris, zones, mesures, c):
         p, e, la, bouge = mesures.get(n, (0, 0, 0, 0))
         for i, ligne in enumerate((f"zone {n}", f"presence {p:.2f} ({la:.1%})", f"mouvement {e:.2f} ({bouge:.1%})")):
             cv2.putText(vue, ligne, (x0 + 10, y0 + 28 + 26 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+    for i, rect in enumerate(bandes):  # bande touchée : trait épais
+        x0, y0, x1, y1 = (int(v * t) for v, t in zip(rect, (w, h, w, h)))
+        touchee = i < len(cam.touchees) and cam.touchees[i]
+        cv2.rectangle(vue, (x0, y0), (x1 - 1, y1 - 1), (0, 255, 0), 4 if touchee else 1)
+        cv2.putText(vue, f"pas {i + 1}", (x0 + 6, y1 - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
     if cam.fond is None:
         reste = max(0, cam.fond_a - time.monotonic())
         cv2.putText(vue, f"Sortez du champ : fond dans {reste:.0f} s", (10, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
@@ -191,8 +237,13 @@ def main():
     c = lire_config()
     date_config = CONFIG.stat().st_mtime
     cameras = ouvrir_cameras(c)
-    client = SimpleUDPClient(c["osc_adresse"], c["osc_port"])
-    print(f"OSC : envoi vers {c['osc_adresse']}:{c['osc_port']}. Touches : F = reprendre le fond, P = photo, Échap = quitter.")
+    clients = [SimpleUDPClient(v.rsplit(":", 1)[0], int(v.rsplit(":", 1)[1])) for v in c["osc_vers"]]
+    print(f"OSC : envoi vers {', '.join(c['osc_vers'])}. Touches : F = reprendre le fond, P = photo, Échap = quitter.")
+
+    def envoyer(adresse, valeur):
+        for client in clients:
+            client.send_message(adresse, valeur)
+
     dernier = affiche = time.monotonic()
     images = 0
     while True:
@@ -225,17 +276,24 @@ def main():
                 cam.fond = gris.copy()
                 print(f"Fond repris ('{cam.cherche}')")
             mesures = {}
+            bandes = k.get("pas", [])
             if cam.fond is not None:
+                if bandes:
+                    cam.touchees = [part(gris, cam.fond, b, c["seuil"]) > c["pas_seuil"] for b in bandes]
+                    pas = cam.pas.avancer(cam.touchees, maintenant, c["pas_vide_s"])
+                    if pas:
+                        envoyer("/accueil/pas", pas)
+                        print(f"Pas {pas}")
                 for n, rect in k["zones"].items():
                     mesures[n] = mesurer(gris, cam.avant, cam.fond, rect, c)
                     envoi[n] = tuple(max(a, b) for a, b in zip(mesures[n][:2], envoi.get(n, (0, 0))))
                 if c["fond_s"] > 0:  # le fond suit lentement l'image : une lumière qui dérive ne compte pas comme quelqu'un
                     cam.fond += (gris - cam.fond) * min(1.0, dt / c["fond_s"])
-            dessiner(cam, gris, k["zones"], mesures, c)
+            dessiner(cam, gris, k["zones"], mesures, c, bandes)
             cam.avant = gris
         for n, (p, e) in envoi.items():
-            client.send_message(f"/zone/{n}/presence", p)
-            client.send_message(f"/zone/{n}/energie", e)
+            envoyer(f"/zone/{n}/presence", p)
+            envoyer(f"/zone/{n}/energie", e)
         images += lues > 0
         if maintenant - affiche >= 2:
             # lumière : si l'écart entre le plus sombre et le plus clair est grand alors que rien ne bouge, l'image clignote
@@ -258,6 +316,7 @@ def main():
         if touche in (ord("f"), ord("F")):
             for cam in cameras:
                 cam.fond, cam.fond_a = None, maintenant + DELAI_FOND
+                cam.pas, cam.touchees = Pas(), []
                 cam.exposition(False)  # la caméra recherche sa luminosité, puis on la fige de nouveau
             print(f"Sortez du champ : fond repris dans {DELAI_FOND} s")
     for cam in cameras:
@@ -285,6 +344,18 @@ def autotest():
     assert p > 0.3 and e > 0.3, f"en mouvement : présence et mouvement, reçu {p:.2f} {e:.2f}"
     assert mesurer(bouge, immobile, fond, droite, c)[:2] == (0, 0), "la zone voisine ne doit rien voir"
     lire_config()  # le bloc [capteurs] de config.toml existe et se lit
+
+    # Les pas : bandes 1, 2, 3 dans l'ordre. `marche` = liste de (instant, bandes touchées).
+    def marche(etapes, pas=None):
+        pas = pas or Pas()
+        return [n for t, touchees in etapes if (n := pas.avancer([b in touchees for b in (1, 2, 3)], t, 1.5))], pas
+    assert marche([(0, []), (2, [1]), (2.5, [1]), (3, [2]), (3.5, []), (4, [3])])[0] == [1, 2, 3], "3 pas, avec un pied en l'air entre deux"
+    faits, servi = marche([(0, []), (2, [1]), (3, [2]), (4, [3]), (5, [2]), (6, [1]), (6.5, [1, 2])])
+    assert faits == [1, 2, 3], "servi : revenir en arrière ne rejoue rien"
+    assert marche([(8, []), (10, []), (11, [1]), (12, [2])], servi)[0] == [1, 2], "bandes vides 1,5 s : prêt pour la personne suivante"
+    assert marche([(0, []), (2, [3]), (3, [2]), (4, [1]), (5, [2])])[0] == [], "quelqu'un qui revient de la salle : rien"
+    assert marche([(0, []), (2, [1]), (3, [3])])[0] == [1, 3], "une enjambée qui saute la bande 2"
+    assert marche([(0, []), (2, [1]), (5, []), (7, []), (9, [2])])[0] == [1], "parti plus de 1,5 s : on repart de la bande 1"
 
     # Une caméra débranchée est attendue. Les numéros se décalent : on n'ouvre jamais la voisine à sa place.
     global lister_cameras
