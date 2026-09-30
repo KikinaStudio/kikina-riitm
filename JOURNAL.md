@@ -77,6 +77,11 @@ L'écart CLAUDE.md / Notion noté le 24/09 est tranché par le matériel : camé
 - Échec juste avant, à retenir : fond pris avec Jérémie assis dans la bande 3. Son départ laisse la bande « touchée » en permanence, rien ne se réarme. Dans la salle : lancer et appuyer sur F avec la zone d'entrée vide, ne rien déplacer dans les bandes ensuite.
 - Rendu du moteur sur secteur : 11 à 14 ms seul, environ 21 ms quand `capteurs.py` tourne à côté sur le même Mac (limite 33). À surveiller avec 2 caméras.
 
+### À reprendre en priorité à la prochaine session (état au 30/09, 18 h 15)
+1. **Les anneaux des pas ne se voient pas.** Le moteur reçoit `/accueil/pas` et affiche `pas 1/2/3`, mais ni Jérémie dans l'aperçu ni moi sur une capture (`captures/kikina_calme_20260930_181051.png`, x 2450 à 2950) ne voyons d'anneau. Pas de conclusion possible ce soir : le Mac tournait à 3-10 i/s (voir point 2). À faire sur un Mac en bon état : comparer avec un anneau de note (`--note`), vérifier `pas_y = 0.8` (peu de matière en bas au calme ?), la force, et la conversion de x.
+2. **Le Mac s'est effondré en fin de journée** : moteur à 3-10 i/s même seul, envoi NDI 140 à 350 ms, `capteurs.py` à 13-25 i/s, un décrochage de caméra. Contexte : batterie tombée à 2-5 % (mode économie d'énergie), puis secteur mais encore très bas, et l'application Claude à plus de 200 % de processeur (conversation très longue, grosses consoles collées). À revérifier batterie chargée, secteur, conversation neuve, capteurs lancés dans le Terminal de macOS : le moteur doit revenir à 11-14 ms de rendu et 30 i/s. Si ce n'est pas le cas, c'est un vrai problème à traiter avant la salle.
+3. Dans la salle : adaptateur USB fixé au gaffer, P pour placer bandes et zones, caler `pas_x`, essayer les 2 caméras ensemble, donner `/accueil/pas` à Arthur et récupérer son adresse et son port (`osc_vers`).
+
 ### Comment relancer
 ```bash
 cd "/Users/leon/RIITM final"
