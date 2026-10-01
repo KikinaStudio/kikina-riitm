@@ -145,6 +145,7 @@ class Camera:
 
     def __init__(self, cherche, ips=30):
         self.cherche, self.ips = cherche, ips
+        self.titre = cherche  # nom de la fenêtre : "camera1", "camera2"... (deux caméras peuvent porter le même nom)
         self.figee = False
         self.retournee = False  # caméra fixée tête en bas : on remet l'image à l'endroit
         self.pas, self.touchees = Pas(), []
@@ -180,7 +181,7 @@ class Camera:
     def exposition(self, figee):
         """Automatique : la caméra cherche sa luminosité. Figée : elle n'y touche plus."""
         self.figee = figee
-        print(f"Caméra '{self.cherche}' : {regler(self.identifiant, self.ips, figee)}")
+        print(f"{self.titre} '{self.cherche}' : {regler(self.identifiant, self.ips, figee)}")
 
     def lire(self, prises):
         """Petite image grise, ou None si la caméra ne répond pas (on la recherche toutes les 2 s)."""
@@ -200,6 +201,7 @@ def ouvrir_cameras(c):
     cameras = []
     for k in c["camera"]:  # deux caméras du même nom : la 1re du fichier prend la 1re trouvée, etc.
         cam = Camera(k["nom"], c["ips"])
+        cam.titre = f"camera{len(cameras) + 1}"  # comme les photos
         if not cam.ouvrir({a.identifiant for a in cameras}):
             raise SystemExit(f"Caméra '{k['nom']}' introuvable parmi les caméras branchées.")
         cameras.append(cam)
@@ -228,7 +230,7 @@ def dessiner(cam, gris, zones, mesures, c, bandes=()):
     if cam.fond is None:
         reste = max(0, cam.fond_a - time.monotonic())
         cv2.putText(vue, f"Sortez du champ : fond dans {reste:.0f} s", (10, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-    cv2.imshow(cam.cherche, vue)
+    cv2.imshow(cam.titre, vue)
 
 
 def lire_config():
@@ -280,7 +282,7 @@ def main():
                 if cam.cap is None:  # débranchée : on le dit dans la fenêtre, l'image ne reste pas figée
                     noir = np.zeros((720, 960, 3), "u1")
                     cv2.putText(noir, "Camera debranchee, je la cherche...", (40, 360), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2)
-                    cv2.imshow(cam.cherche, noir)
+                    cv2.imshow(cam.titre, noir)
                 continue
             lues += 1
             cam.lumiere = [min(cam.lumiere[0], float(gris.mean())), max(cam.lumiere[1], float(gris.mean()))]
@@ -290,7 +292,7 @@ def main():
                 cam.exposition(True)  # 1 s avant le fond : la luminosité ne bougera plus, le fond reste valable
             if cam.fond is None and maintenant >= cam.fond_a:
                 cam.fond = gris.copy()
-                print(f"Fond repris ('{cam.cherche}')")
+                print(f"Fond repris ({cam.titre})")
             mesures = {}
             bandes = k.get("pas", [])
             if cam.fond is not None:
