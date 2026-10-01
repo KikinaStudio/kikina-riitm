@@ -145,7 +145,7 @@ fond_s = 120               # le fond suit lentement l'image (lumière qui dériv
 # caméra [gauche, haut, droite, bas], de 0 à 1. Test au bureau : moitié gauche = zone 1, moitié droite = zone 2.
 [[capteurs.camera]]
 nom = "HD USB Camera"
-retournee = false          # true si la caméra est fixée tête en bas : l'image est remise à l'endroit (se relit à chaud)
+retournee = true           # true si la caméra est fixée tête en bas : l'image est remise à l'endroit (se relit à chaud)
 zones = { 1 = [0.0, 0.0, 0.5, 1.0], 2 = [0.5, 0.0, 1.0, 1.0] }
 # Atelier Accueil : les bandes au sol, dans l'ordre où le visiteur les franchit (mêmes rectangles de 0 à 1).
 # Elles doivent se toucher, et la caméra doit voir le visiteur venir vers elle : la bande 1 est la plus haute dans l'image.
