@@ -22,6 +22,24 @@
 - Fragile : quand une caméra est muette, `cam.read()` bloque et fige aussi l'autre (0,3 i/s). Le jour J, une caméra qui décroche bloque les 4 zones. À corriger (lecture de chaque caméra dans son propre fil).
 - Reste : placer les zones et les bandes des pas sur des photos (P) une fois les caméras fixées ; test NDI avec la régie (adaptateur RJ45, mode économie d'énergie à couper).
 
+### NDI vers la régie (après-midi)
+- Mac sur secteur, mode économie coupé. Adaptateur USB-C vers Ethernet `USB 10/100/1G/2.5G LAN` (en17), liaison 2,5 Gbit/s, adresse 192.168.4.62 donnée par le DHCP de la régie. Wifi laissé allumé (Claude en a besoin), sans gêne.
+- Largeur confirmée par la régie : **14446**.
+- Source dans MadMapper : `MACBOOK-MURICA-LEON (KIKINA)`. 2 récepteurs.
+- `test_ndi.py` : 30,0 i/s côté Mac, 80 Mbit/s sur le câble (bien moins qu'estimé). À demi-résolution : 30,00 i/s, 1 image en retard sur 2700.
+- **Côté régie, MadMapper ne tourne qu'à 23 i/s avec notre flux à pleine taille** (46 à demi-taille). Ce chiffre est la cadence de rendu de MadMapper, pas les images reçues : la machine de la régie peine à 14446 px. La barre de la mire saccade un tout petit peu (Jérémie). Envoyer 60 i/s n'aiderait pas. Questions au régisseur : sa cadence sans flux, sa machine.
+- `kikina.py` vers la régie : 30 i/s, rendu 12 ms seul, 14 à 24 ms avec les capteurs sur le même Mac.
+
+### Caméras dans la salle (après-midi)
+- Les capteurs ne peuvent pas ouvrir les caméras quand Claude les lance en arrière-plan (autorisation caméra de macOS). Ils marchent lancés dans le panneau Terminal de l'app (onglet).
+- Caméra 1 : au centre du mur Densité, regarde vers Proximité. Finalement **à l'endroit** (`retournee = false`).
+- Caméra 2 : au centre du mur Mouvement, regarde la porte d'entrée. La table de matériel (à droite de l'image) est hors zone.
+- Zones = polygones tracés par Jérémie sur `captures/camera*_125610.jpg` (photos sans filtre, lumière allumée). Nouveau : une zone peut être un polygone `[[x, y], ...]` en plus d'un rectangle. Une même zone vue par les 2 caméras : on garde la plus forte mesure. Densité déduite : le sol au pied de la caméra 1 (bas de l'image, limite à 0.7, à ajuster).
+- Bandes des pas de l'Accueil coupées (celles du bureau tombaient au milieu du sol). À replacer.
+- Nouveau : les capteurs réécrivent toutes les 2 s `captures/direct_camera1.jpg` et `direct_camera2.jpg` (image de contrôle avec les zones). Créer le fichier `captures/refaire_fond` = touche F à distance.
+- Avec filtre IR, avant cadrage : caméra 1 voyait un halo en anneaux (projecteur IR qui frappe le filtre ?), caméra 2 presque noire au-delà de 1 ou 2 m. **Pas revérifié avec filtres remis.**
+- Fragile : capteurs tantôt à 28 i/s, tantôt à 15 i/s (exposition figée sur une pose longue ?). Une présence résiduelle reste sur Proximité quand quelque chose bouge au fond après la photo de fond.
+
 ---
 
 ## 30 septembre 2026 - Étape 4 : les caméras (premier essai au bureau, à valider par Jérémie)

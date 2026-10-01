@@ -37,8 +37,12 @@ def preparer(image):
 
 
 def decoupe(image, rect):
-    """Le rectangle [gauche, haut, droite, bas] (de 0 à 1) dans l'image."""
+    """Le rectangle [gauche, haut, droite, bas] (de 0 à 1) dans l'image, ou un polygone [[x, y], [x, y]...]."""
     h, w = image.shape[:2]
+    if isinstance(rect[0], list):
+        masque = np.zeros((h, w), "u1")
+        cv2.fillPoly(masque, [np.int32([(x * w, y * h) for x, y in rect])], 1)
+        return masque.astype(bool)
     x0, y0, x1, y1 = rect
     return np.s_[int(y0 * h):max(int(y1 * h), int(y0 * h) + 1), int(x0 * w):max(int(x1 * w), int(x0 * w) + 1)]
 
@@ -218,8 +222,13 @@ def dessiner(cam, gris, zones, mesures, c, bandes=()):
     vue = cv2.resize(vue, None, fx=3, fy=3, interpolation=cv2.INTER_NEAREST)
     h, w = vue.shape[:2]
     for n, rect in zones.items():
-        x0, y0, x1, y1 = (int(v * t) for v, t in zip(rect, (w, h, w, h)))
-        cv2.rectangle(vue, (x0, y0), (x1 - 1, y1 - 1), (0, 255, 255), 1)
+        if isinstance(rect[0], list):
+            points = np.int32([(x * w, y * h) for x, y in rect])
+            cv2.polylines(vue, [points], True, (0, 255, 255), 1)
+            x0, y0 = points.min(axis=0)
+        else:
+            x0, y0, x1, y1 = (int(v * t) for v, t in zip(rect, (w, h, w, h)))
+            cv2.rectangle(vue, (x0, y0), (x1 - 1, y1 - 1), (0, 255, 255), 1)
         p, e, la, bouge = mesures.get(n, (0, 0, 0, 0))
         for i, ligne in enumerate((f"zone {n}", f"presence {p:.2f} ({la:.1%})", f"mouvement {e:.2f} ({bouge:.1%})")):
             cv2.putText(vue, ligne, (x0 + 10, y0 + 28 + 26 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
@@ -232,6 +241,7 @@ def dessiner(cam, gris, zones, mesures, c, bandes=()):
         reste = max(0, cam.fond_a - time.monotonic())
         cv2.putText(vue, f"Sortez du champ : fond dans {reste:.0f} s", (10, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
     cv2.imshow(cam.titre, vue)
+    cam.vue = vue
 
 
 def lire_config():
@@ -253,6 +263,7 @@ def main():
 
     dernier = affiche = time.monotonic()
     images = 0
+    refaire_fond = False
     serie_fin = serie_suivante = 0.0
 
     def photo():
@@ -315,6 +326,14 @@ def main():
             envoyer(f"/zone/{n}/energie", e)
         images += lues > 0
         if maintenant - affiche >= 2:
+            # image de contrôle de chaque caméra, toujours dans le même fichier (rien ne s'accumule)
+            for cam in cameras:
+                if getattr(cam, "vue", None) is not None:
+                    cv2.imwrite(str(ICI / "captures" / f"direct_{cam.titre}.jpg"), cam.vue)
+            # fichier captures/refaire_fond : comme la touche F (pour la reprendre à distance)
+            if (ICI / "captures" / "refaire_fond").exists():
+                (ICI / "captures" / "refaire_fond").unlink()
+                refaire_fond = True
             # lumière : si l'écart entre le plus sombre et le plus clair est grand alors que rien ne bouge, l'image clignote
             lumieres = " ".join(f"{a:.0f}-{b:.0f}" for a, b in (cam.lumiere for cam in cameras) if a <= b)
             for cam in cameras:
@@ -333,7 +352,8 @@ def main():
         if maintenant < serie_fin and maintenant >= serie_suivante:
             serie_suivante += 1
             photo()
-        if touche in (ord("f"), ord("F")):
+        if touche in (ord("f"), ord("F")) or refaire_fond:
+            refaire_fond = False
             for cam in cameras:
                 cam.fond, cam.fond_a = None, maintenant + DELAI_FOND
                 cam.pas, cam.touchees = Pas(), []
