@@ -25,6 +25,7 @@ from pythonosc.udp_client import SimpleUDPClient
 ICI = Path(__file__).parent
 CONFIG = ICI / "config.toml"
 LARGEUR = 320      # l'image est réduite à cette largeur avant mesure
+CAPTURE = (320, 240)  # demandé à la caméra : la mesure n'en voit pas plus, et deux caméras en 640 x 480 ne passent pas dans un même câble USB 2
 DELAI_FOND = 5     # secondes entre le lancement (ou la touche F) et la prise du fond (réglage `fond_delai_s`)
 
 
@@ -124,7 +125,7 @@ def regler(identifiant, ips, figee):
         t = AV.CMVideoFormatDescriptionGetDimensions(f.formatDescription())
         return t.width, t.height
     cadence = lambda f: max(r.maxFrameRate() for r in f.videoSupportedFrameRateRanges())
-    formats = [f for f in d.formats() if taille(f) == (640, 480)]
+    formats = [f for f in d.formats() if taille(f) == CAPTURE]
     if formats:
         bon = min(formats, key=lambda f: abs(cadence(f) - ips))
         if bon != d.activeFormat():
@@ -167,8 +168,8 @@ class Camera:
                     raise SystemExit(f"Caméra '{nom}' : impossible de l'ouvrir. macOS : Réglages Système > "
                                      "Confidentialité et sécurité > Caméra, autoriser l'application d'où ce programme "
                                      "est lancé (le Terminal), puis relancer.")
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAPTURE[0])
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAPTURE[1])
                 self.cap, self.identifiant = cap, identifiant
                 self.avant = self.fond = None
                 self.pas, self.touchees = Pas(), []
