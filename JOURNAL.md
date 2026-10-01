@@ -12,6 +12,16 @@
 - Constat à 8 h 40 : Mac sur batterie (69 %) et mode économie d'énergie ACTIF. Cause probable de l'effondrement du 30/09 : secteur et mode économie coupé avant tout test.
 - Conditions de la salle (Notion, fiche technique) : NDI par RJ45, résolution complète, MadMapper découpe. Mire de la fiche : 5232 + 2154 + 5033 + 2154 = 14573 px de large, notre config est à 14446. À trancher avec le régisseur sur place.
 
+### Les 2 caméras dans la salle (matin)
+- Une seule fenêtre s'affichait : les 2 caméras portent le même nom, la fenêtre aussi. Corrigé : fenêtres `camera1` et `camera2` (comme les photos).
+- Caméra 1 fixée à l'envers : `retournee = true`.
+- Le hub `USB3.1 Hub` (celui de la veille) ne laisse passer AUCUNE caméra (sa partie USB 2 n'apparaît pas). Utiliser le dock (celui avec `USB C Video Adaptor` et lecteur de cartes).
+- Caméra 2 muette (0 image même seule) avec sa rallonge active, puis revenue après rebranchement : mauvais contact ou rallonge. Tout fixer au gaffer. Outil de diagnostic : `.venv/bin/python outils/test_cameras.py` (chaque caméra seule puis ensemble).
+- Caméras passées de 640 x 480 à 320 x 240 (`CAPTURE` dans `capteurs.py`) : la mesure travaillait déjà en 320 px. Effet : 27 à 29 i/s au lieu de 15 avec les 2 caméras sur le même dock.
+- État à 11 h 15 : 2 caméras, 27-29 i/s, 4 zones à 0 salle vide. Image de la caméra 2 sombre (lumière 42) mais exploitable.
+- Fragile : quand une caméra est muette, `cam.read()` bloque et fige aussi l'autre (0,3 i/s). Le jour J, une caméra qui décroche bloque les 4 zones. À corriger (lecture de chaque caméra dans son propre fil).
+- Reste : placer les zones et les bandes des pas sur des photos (P) une fois les caméras fixées ; test NDI avec la régie (adaptateur RJ45, mode économie d'énergie à couper).
+
 ---
 
 ## 30 septembre 2026 - Étape 4 : les caméras (premier essai au bureau, à valider par Jérémie)
