@@ -152,7 +152,8 @@ zones = { 1 = [0.0, 0.0, 0.5, 1.0], 2 = [0.5, 0.0, 1.0, 1.0] }
 # Bureau de Jérémie (30/09, caméra en hauteur et à l'endroit) : de la porte du fond vers la caméra.
 pas = [[0.45, 0.59, 0.63, 0.65], [0.42, 0.65, 0.66, 0.72], [0.39, 0.72, 0.69, 0.83]]
 
-# Deuxième caméra (même nom : la 1re du fichier prend la 1re branchée). Enlever les # pour l'activer, puis relancer.
-# [[capteurs.camera]]
-# nom = "HD USB Camera"
-# zones = { 3 = [0.0, 0.0, 0.5, 1.0], 4 = [0.5, 0.0, 1.0, 1.0] }
+# Deuxième caméra (même nom : la 1re du fichier prend la 1re branchée). Mettre des # devant ces 4 lignes pour la couper.
+[[capteurs.camera]]
+nom = "HD USB Camera"
+retournee = false
+zones = { 3 = [0.0, 0.0, 0.5, 1.0], 4 = [0.5, 0.0, 1.0, 1.0] }

@@ -4,6 +4,16 @@
 
 ---
 
+## 1er octobre 2026 - Test dans la salle (MacBook)
+
+### Avant d'entrer
+- Les 2 caméras USB sont vues par le Mac (`HD USB Camera` x 2). Deuxième caméra activée dans `config.toml` (zones 3 et 4, rectangles provisoires). Autotest `capteurs.py --test` OK.
+- Le Mac n'a aucune prise réseau RJ45 : un adaptateur USB-C vers Ethernet (gigabit au minimum) est obligatoire pour le NDI.
+- Constat à 8 h 40 : Mac sur batterie (69 %) et mode économie d'énergie ACTIF. Cause probable de l'effondrement du 30/09 : secteur et mode économie coupé avant tout test.
+- Conditions de la salle (Notion, fiche technique) : NDI par RJ45, résolution complète, MadMapper découpe. Mire de la fiche : 5232 + 2154 + 5033 + 2154 = 14573 px de large, notre config est à 14446. À trancher avec le régisseur sur place.
+
+---
+
 ## 30 septembre 2026 - Étape 4 : les caméras (premier essai au bureau, à valider par Jérémie)
 
 ### Matériel reçu
