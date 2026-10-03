@@ -140,26 +140,7 @@ pas_seuil = 0.15           # atelier Accueil : part d'une bande qui doit différ
 pas_vide_s = 1.5           # bandes vides depuis ce temps : prêt pour la personne suivante
 fond_delai_s = 10          # temps laissé pour sortir du champ avant la photo du fond (au lancement et après la touche F)
 fond_s = 120               # le fond suit lentement l'image (lumière qui dérive). 0 = fond fixe. Touche F : le reprendre
+tranches = 8               # une zone dont le mur est tracé est découpée en 8 tranches le long du mur : la matière ne s'agite que là où sont les gens
 
-# Une caméra : une partie de son nom, et ses zones. Une zone = un rectangle dans l'image de la
-# caméra [gauche, haut, droite, bas], de 0 à 1, ou un polygone [[x, y], [x, y], ...] (x et y de 0 à 1). Zone 1 Accueil, 2 Densité, 3 Mouvement, 4 Proximité.
-# Une même zone peut être vue par les 2 caméras : on garde la plus forte des deux mesures.
-# Salle (1er octobre, photos captures/camera*_125610.jpg) : caméra 1 au centre du mur Densité, regarde vers Proximité.
-[[capteurs.camera]]
-nom = "HD USB Camera"
-retournee = false          # true si la caméra est fixée tête en bas : l'image est remise à l'endroit (se relit à chaud)
-# Polygones tracés par Jérémie sur captures/camera1_125610.jpg (rouge Accueil, bleu Mouvement, vert Proximité).
-# Densité (2) : déduite, le sol au pied de la caméra entre Mouvement et Accueil (bas de l'image). Profondeur : 0.7, à ajuster.
-zones = { 1 = [[0.58, 0.26], [1.0, 0.43], [1.0, 1.0], [0.9, 1.0], [0.6, 0.44]], 3 = [[0.0, 0.34], [0.39, 0.26], [0.39, 0.36], [0.36, 0.49], [0.14, 1.0], [0.0, 1.0]], 4 = [0.39, 0.26, 0.58, 0.38], 2 = [[0.14, 1.0], [0.27, 0.7], [0.74, 0.7], [0.9, 1.0]] }
-# Atelier Accueil : les bandes au sol, dans l'ordre où le visiteur les franchit (mêmes rectangles de 0 à 1).
-# Elles doivent se toucher, et la caméra doit voir le visiteur venir vers elle : la bande 1 est la plus haute dans l'image.
-# Bureau de Jérémie (30/09, caméra en hauteur et à l'endroit) : de la porte du fond vers la caméra.
-# Coupées le 1er octobre : à replacer sur la vue de la salle (elles tombaient au milieu du sol).
-# pas = [[0.45, 0.59, 0.63, 0.65], [0.42, 0.65, 0.66, 0.72], [0.39, 0.72, 0.69, 0.83]]
-
-# Deuxième caméra (même nom : la 1re du fichier prend la 1re branchée). Mettre des # devant ces 4 lignes pour la couper.
-[[capteurs.camera]]
-nom = "HD USB Camera"
-retournee = false
-# Caméra 2 au centre du mur Mouvement, regarde la porte d'entrée. La table de matériel (B4, C4) reste hors zone.
-zones = { 1 = [[0.43, 0.4], [0.75, 0.0], [1.0, 0.0], [1.0, 0.09], [0.48, 0.53]], 3 = [[0.0, 0.77], [0.18, 0.77], [0.32, 1.0], [0.0, 1.0]], 4 = [[0.18, 0.77], [0.42, 0.4], [0.47, 0.53], [0.32, 0.97]] }
+# Les caméras et leurs zones sont dans un fichier par lieu, tracé à la souris sur une photo (outils/tracer.py) :
+# lieux/salle.toml pour le show (par défaut), lieux/maison.toml pour les essais (python capteurs.py maison).

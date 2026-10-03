@@ -4,6 +4,37 @@
 
 ---
 
+## 3 octobre 2026 - Agitation localisée le long du mur (essais chez Jérémie)
+
+### Pourquoi
+Jérémie : quand un visiteur s'approche d'un mur, la matière doit s'agiter à cet endroit précis. Ce n'était pas le cas : une zone agitait tout son mur (15 m pour l'Accueil). Conception : `docs/superpowers/specs/2026-10-03-agitation-localisee-design.md`.
+
+### Ce qui a été fait
+- Les caméras et leurs zones quittent `config.toml` : un fichier par lieu, `lieux/salle.toml` (le show, par défaut, mêmes zones qu'au 1er octobre) et `lieux/maison.toml`. `capteurs.py maison` choisit le lieu. Les seuils restent dans `config.toml`.
+- `outils/tracer.py` (nouveau) : sur la photo d'une caméra, à la souris, zones au sol (touches 1 à 4), puis 3 clics au pied du mur (bout gauche, milieu, bout droit, vus face au mur), bandes des pas (B). S enregistre, `capteurs.py` relit aussitôt.
+- `capteurs.py` : une zone dont le mur est tracé est découpée en 8 tranches (`tranches`) le long du mur ; envoi en plus de `/zone/N/tranches/presence` et `/zone/N/tranches/energie` (8 valeurs). Fenêtre : ligne du mur en violet, un disque par tranche qui grossit quand ça bouge. Console : une petite barre par zone.
+- `kikina.py` : une zone qui reçoit des tranches n'agite que là où ça bouge (interpolé entre les tranches). Sans tranches : tout le mur, comme avant. Le clavier A Z E R agite toujours tout le mur.
+
+### Ce qui marche
+- Autotests `capteurs.py --test`, `outils/tracer.py --test`, `entrees.py` OK.
+- Moteur à 30 i/s avec de fausses tranches (quelqu'un au bout droit du mur 1) : seule la droite du mur 1 se soulève, le reste reste au repos.
+
+### Ce qui reste fragile
+- Pas encore essayé avec la vraie caméra (essai de Jérémie chez lui).
+- Position à 1 m près environ (fisheye, murs vus de biais). Une tranche lointaine, petite dans l'image, est plus sensible au bruit.
+- Salle : les murs ne sont pas encore tracés. Chaque zone doit avoir sa ligne de mur sur chaque caméra qui la voit, sinon cette caméra ne compte pas pour la position. Possible sur les photos du 1er octobre si les caméras n'ont pas bougé.
+- Calibrage de l'excitation à faire : en musique dense, l'agitation est déjà au maximum et l'effet du visiteur se voit à peine (seuls le soulèvement et l'éclat restent).
+
+### Comment relancer
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/python kikina.py                 # onglet 1
+.venv/bin/python capteurs.py maison        # onglet 2 (P = photo)
+.venv/bin/python outils/tracer.py maison   # onglet 3, après la photo
+```
+
+---
+
 ## 1er octobre 2026 - Test dans la salle (MacBook)
 
 ### Avant d'entrer

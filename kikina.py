@@ -309,15 +309,25 @@ class Kikina(mglw.WindowConfig):
 
         # Les zones : l'énergie (les gens bougent) s'accumule comme la souris ; la présence (quelqu'un
         # est là, immobile) maintient une légère agitation. Vraies entrées et clavier s'additionnent.
+        # Si les capteurs disent où, le long du mur (tranches), seul cet endroit s'agite ; sinon tout le mur.
         z, E = self.cfg["zones"], self.entrees
         x = (np.arange(ex.shape[1]) + 0.5) / ex.shape[1]
         apport, plancher = np.zeros_like(x), np.zeros_like(x)
         for i, (a, b) in enumerate(z["plages"]):
-            profil = profil_zone(x, a / LARGEUR_REF, b / LARGEUR_REF)
+            a, b = a / LARGEUR_REF, b / LARGEUR_REF
+            profil = profil_zone(x, a, b)
             presence = self.suivre(f"presence{i}", max(E.zone("presence", i), self.sim_presence[i], self.sim_bouge[i]),
-                                   z["presence_s"], dt)
-            apport += max(E.zone("energie", i), self.sim_bouge[i]) * profil
-            plancher = np.maximum(plancher, presence * z["presence_force"] * profil)
+                                   z["presence_s"], dt)  # sert aussi aux cards
+            tp, te = E.tranches("presence", i), E.tranches("energie", i)
+            if tp is None or te is None:
+                apport += max(E.zone("energie", i), self.sim_bouge[i]) * profil
+                plancher = np.maximum(plancher, presence * z["presence_force"] * profil)
+                continue
+            t = ((x - a + 0.5) % 1 - 0.5) / (b - a)  # 0 au bout gauche du mur, 1 au bout droit (le bandeau boucle)
+            le_long = lambda v: np.interp(t * len(v) - 0.5, np.arange(len(v)), v) * profil  # entre les centres des tranches
+            tp = self.suivre(f"tranches{i}", np.maximum(tp, max(self.sim_presence[i], self.sim_bouge[i])), z["presence_s"], dt)
+            apport += le_long(np.maximum(te, self.sim_bouge[i]))  # le clavier agite toujours tout le mur
+            plancher = np.maximum(plancher, le_long(tp) * z["presence_force"])
         ex += (apport * (dt / m["agitation_montee_s"])).astype("f4")
         np.maximum(ex, plancher.astype("f4"), out=ex)
         np.minimum(ex, 1.0, out=ex)
@@ -327,7 +337,9 @@ class Kikina(mglw.WindowConfig):
     def suivre(self, nom, cible, duree, dt):
         """Lissage d'une entrée : rien ne saute."""
         v = self.lisse.get(nom, cible)
-        v += (cible - v) * lissage(dt, duree)
+        if np.shape(v) != np.shape(cible):  # nombre de tranches changé
+            v = cible
+        v = v + (cible - v) * lissage(dt, duree)
         self.lisse[nom] = v
         return v
 
@@ -404,7 +416,9 @@ class Kikina(mglw.WindowConfig):
                   f"relecture {l:4.1f} ms | envoi NDI {e:4.1f} ms | CPU programme {self.moi.cpu_percent():4.0f} % | "
                   f"récepteurs NDI : {self.sender.get_num_connections(0)}", flush=True)
             E, a = self.entrees, self.entrees.analyse
-            zones = " ".join(f"{max(E.zone('energie', i), self.sim_bouge[i]):.1f}" for i in range(4))
+            barre = lambda v: "".join("·▁▂▃▄▅▆▇█"[round(float(x) * 8)] for x in v)  # une zone mesurée le long de son mur
+            zones = " ".join(barre(E.tranches("energie", i)) if E.tranches("energie", i) is not None
+                             else f"{max(E.zone('energie', i), self.sim_bouge[i]):.1f}" for i in range(4))
             print(f"        son {a.volume_db:6.1f} dB | marée {self.params['eveil']:.2f} | graves {self.lisse.get('graves', 0):.2f} | "
                   f"brillance {a.brillance:4.0f} Hz ({self.lisse.get('brillance', 0):.2f}) | notes {self.notes_vues} | zones {zones}", flush=True)
             self.wnd.title = f"Kikina | {self.cible} | {ips:.1f} i/s"

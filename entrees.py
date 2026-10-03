@@ -108,6 +108,7 @@ class Entrees:
     def __init__(self, cfg):
         e = cfg["entrees"]
         self._zones = {}                        # (mesure, zone) : (valeur, date de réception)
+        self._tranches = {}                     # (mesure, zone) : (valeurs le long du mur, date de réception)
         self._densite, self._densite_date = 0.0, -1e9
         self.en_route = deque()                 # simulateur : (moment où on l'entendra, force, Hz)
         self.pas = deque(maxlen=16)             # pas de l'atelier Accueil reçus en OSC (1, 2, 3), lus par kikina.py
@@ -153,11 +154,17 @@ class Entrees:
             if valeurs and isinstance(valeurs[0], (int, float)):
                 self.pas.append(int(valeurs[0]))
             return
+        m = adresse.strip("/").split("/")
+        if len(m) == 4 and m[0] == "zone" and m[1] in ("1", "2", "3", "4") and m[2] == "tranches" and m[3] in ("presence", "energie"):
+            try:  # la zone mesurée tranche par tranche le long de son mur
+                self._tranches[m[3], int(m[1]) - 1] = np.clip(np.array(valeurs, "f4"), 0, 1), time.monotonic()
+            except (TypeError, ValueError):
+                pass
+            return
         try:
             v = min(1.0, max(0.0, float(valeurs[0])))
         except (IndexError, TypeError, ValueError):
             return
-        m = adresse.strip("/").split("/")
         if m == ["music", "densite"]:
             self._densite, self._densite_date = v, time.monotonic()
         elif len(m) == 3 and m[0] == "zone" and m[1] in ("1", "2", "3", "4") and m[2] in ("presence", "energie"):
@@ -176,6 +183,11 @@ class Entrees:
         """Dernière valeur reçue ("presence" ou "energie", zone 0 à 3), 0 si rien reçu depuis 3 s (capteur arrêté)."""
         v, date = self._zones.get((mesure, i), (0.0, -1e9))
         return v if time.monotonic() - date < 3 else 0.0
+
+    def tranches(self, mesure, i):
+        """Valeurs le long du mur de la zone i ("presence" ou "energie"), ou None (mur pas tracé, ou capteur muet depuis 3 s)."""
+        v, date = self._tranches.get((mesure, i), (None, -1e9))
+        return v if time.monotonic() - date < 3 and v is not None and len(v) else None
 
     def densite(self):
         """Densité envoyée par la musique en OSC, ou None si rien reçu depuis 5 s."""
@@ -220,7 +232,7 @@ if __name__ == "__main__":  # autotest
     assert dense > calme + 3, "le volume ne monte pas dans la partie dense"
 
     ent = Entrees.__new__(Entrees)  # juste la partie OSC, sans le son
-    ent._zones, ent._densite, ent._densite_date, ent.pas = {}, 0.0, -1e9, deque()
+    ent._zones, ent._tranches, ent._densite, ent._densite_date, ent.pas = {}, {}, 0.0, -1e9, deque()
     disp = Dispatcher()
     disp.set_default_handler(ent._osc)
     serveur = ThreadingOSCUDPServer(("127.0.0.1", 0), disp)
@@ -231,11 +243,13 @@ if __name__ == "__main__":  # autotest
     client.send_message("/zone/9/energie", 1.0)   # zone inconnue : ignorée
     client.send_message("/music/densite", 3.0)    # borné à 1
     client.send_message("/accueil/pas", 2)
+    client.send_message("/zone/4/tranches/energie", [0.0, 0.5, 1.5])  # borné à 1
     time.sleep(0.3)
     assert abs(ent.zone("energie", 1) - 0.7) < 1e-6 and ent.zone("energie", 0) == 0
     ent._zones["energie", 1] = (0.7, time.monotonic() - 4)   # capteur muet depuis 4 s : retombe à 0
     assert ent.zone("energie", 1) == 0
     assert ent.densite() == 1.0, ent.densite()
     assert list(ent.pas) == [2], ent.pas
+    assert list(ent.tranches("energie", 3)) == [0.0, 0.5, 1.0] and ent.tranches("presence", 3) is None
     serveur.shutdown()
     print("autotest OK")

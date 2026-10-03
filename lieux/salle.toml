@@ -1,0 +1,20 @@
+# Les caméras de ce lieu. Écrit par outils/tracer.py : refaire le tracé plutôt que modifier à la main.
+# Coordonnées de 0 à 1 dans l'image de la caméra (0, 0 = en haut à gauche).
+# nom : une partie du nom de la caméra (deux caméras du même nom : la 1re du fichier prend la 1re branchée).
+# retournee : true si la caméra est fixée tête en bas.
+# zones : le sol devant chaque mur (1 Accueil, 2 Densité, 3 Mouvement, 4 Proximité),
+#   polygone [[x, y], ...] ou rectangle [gauche, haut, droite, bas]. Une même zone vue par 2 caméras : la plus forte mesure.
+# murs : points au pied du mur, bout gauche, milieu, bout droit (vus face au mur). Sans eux, la zone agite tout son mur.
+# pas : les bandes au sol de l'Accueil [gauche, haut, droite, bas], dans l'ordre où on les franchit.
+
+[[camera]]
+nom = "HD USB Camera"
+retournee = false
+note = "Salle, 1er octobre (photo captures/camera1_125610.jpg) : au centre du mur Densité, regarde vers Proximité. Zones tracées par Jérémie. Densité (2) déduite : le sol au pied de la caméra, profondeur 0.7 à ajuster. Bandes des pas à replacer."
+zones = { 1 = [[0.58, 0.26], [1, 0.43], [1, 1], [0.9, 1], [0.6, 0.44]], 3 = [[0, 0.34], [0.39, 0.26], [0.39, 0.36], [0.36, 0.49], [0.14, 1], [0, 1]], 4 = [0.39, 0.26, 0.58, 0.38], 2 = [[0.14, 1], [0.27, 0.7], [0.74, 0.7], [0.9, 1]] }
+
+[[camera]]
+nom = "HD USB Camera"
+retournee = false
+note = "Salle, 1er octobre (photo captures/camera2_125610.jpg) : au centre du mur Mouvement, regarde la porte d'entrée. La table de matériel reste hors zone."
+zones = { 1 = [[0.43, 0.4], [0.75, 0], [1, 0], [1, 0.09], [0.48, 0.53]], 3 = [[0, 0.77], [0.18, 0.77], [0.32, 1], [0, 1]], 4 = [[0.18, 0.77], [0.42, 0.4], [0.47, 0.53], [0.32, 0.97]] }

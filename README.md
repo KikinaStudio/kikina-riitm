@@ -138,19 +138,27 @@ cd "/Users/leon/RIITM final"
 ```
 (Windows : `.venv\Scripts\python capteurs.py`.) macOS, la première fois : autoriser le Terminal à utiliser la caméra, puis relancer.
 
+Les caméras, leurs zones et les bandes des pas sont dans un fichier par lieu : `lieux/salle.toml` (le show, par défaut) et `lieux/maison.toml` (essais ailleurs : `.venv/bin/python capteurs.py maison`). Les seuils restent dans `config.toml`, communs à tous les lieux.
+
+**Tracer les zones à la souris** : touche **P** dans `capteurs.py` (photo de chaque caméra), puis
+```bash
+.venv/bin/python outils/tracer.py salle 1
+```
+(`salle` ou `maison`, puis le numéro de la caméra ; la dernière photo de cette caméra s'ouvre.) Touche **1** à **4** : cliquer les coins du sol devant ce mur, Entrée, puis 3 clics au pied du mur : bout gauche, milieu, bout droit, vus face au mur depuis le centre de la pièce. Touche **B** : les 3 bandes des pas (2 coins par bande). **S** enregistre : `capteurs.py` le voit aussitôt, sans relancer. Une zone dont le mur est tracé est découpée en tranches le long du mur (`tranches` dans `config.toml`) : le moteur n'agite que l'endroit du mur où sont les gens. Sans ligne de mur, elle agite tout son mur.
+
 Ce qu'on voit : l'image de la caméra en gris, un cadre jaune par zone avec deux chiffres de 0 à 1. **presence** = ce qui diffère de la salle vide (en bleu). **mouvement** = ce qui bouge (en blanc). Entre parenthèses : la part de la zone concernée, pour régler.
 
 - Au lancement, sortir du champ : le programme photographie la salle vide (le « fond ») au bout de 5 s. Touche **F** pour le reprendre (après avoir déplacé la caméra, posé le filtre, changé la lumière). Échap pour quitter.
 - Touche **P** : photo de ce que voit chaque caméra, dans `captures/` (pour dessiner les zones, ou pour me montrer l'image). Touche **S** : une photo par seconde pendant 10 s, le temps d'aller se placer dans le champ.
-- Caméra fixée tête en bas : `retournee = true` dans son bloc, l'image est remise à l'endroit.
+- Caméra fixée tête en bas : `retournee = true` dans son bloc du fichier du lieu, l'image est remise à l'endroit.
 - Une caméra débranchée est attendue et reprise toute seule quand elle revient (la fenêtre affiche « Camera debranchee »). Le programme n'ouvre jamais une autre caméra à sa place.
-- Réglages dans le bloc `[capteurs]` de `config.toml`, relus à chaud : `seuil` (à monter si l'image vide fourmille de bleu), `presence_pleine` et `energie_pleine` (à baisser si les chiffres ne montent pas assez), les rectangles des zones, `osc_vers` (à qui envoyer les chiffres : le moteur, et la machine d'Arthur, sous la forme `"adresse:port"` ; relancer après un changement).
+- Réglages dans le bloc `[capteurs]` de `config.toml`, relus à chaud : `seuil` (à monter si l'image vide fourmille de bleu), `presence_pleine` et `energie_pleine` (à baisser si les chiffres ne montent pas assez), `osc_vers` (à qui envoyer les chiffres : le moteur, et la machine d'Arthur, sous la forme `"adresse:port"` ; relancer après un changement).
 - La caméra est réglée à 30 images/seconde (`ips`) et son exposition (sa luminosité) est figée juste avant la photo du fond (`exposition_figee`). La console affiche `lumière 60-62` : le plus sombre et le plus clair des 2 dernières secondes. Pièce vide, les deux nombres doivent rester proches. Mac seulement pour l'instant.
-- **Les 3 premiers pas (atelier Accueil).** Dans le bloc de la caméra qui regarde l'entrée, `pas` liste des bandes au sol (des rectangles dans l'image, dessinés en vert), dans l'ordre où le visiteur les franchit. Chaque bande touchée envoie `/accueil/pas` avec son numéro (1, 2, 3) : Arthur joue la note, le moteur fait naître un anneau sur le mur (positions `pas_x` dans `[zones]`). Règles : une personne à la fois ; la première bande touchée doit être la n°1 ; après la dernière, plus rien tant que les bandes ne sont pas restées vides 1,5 s (`pas_vide_s`) ; quelqu'un qui revient de la salle ne déclenche rien. La caméra doit voir le visiteur venir vers elle et voir ses pieds, et les bandes doivent se toucher. Essayer sans caméra, moteur lancé (un anneau naît sur le mur 1) :
+- **Les 3 premiers pas (atelier Accueil).** Dans le bloc de la caméra qui regarde l'entrée (fichier du lieu, touche B de `outils/tracer.py`), `pas` liste des bandes au sol (des rectangles dans l'image, dessinés en vert), dans l'ordre où le visiteur les franchit. Chaque bande touchée envoie `/accueil/pas` avec son numéro (1, 2, 3) : Arthur joue la note, le moteur fait naître un anneau sur le mur (positions `pas_x` dans `[zones]`). Règles : une personne à la fois ; la première bande touchée doit être la n°1 ; après la dernière, plus rien tant que les bandes ne sont pas restées vides 1,5 s (`pas_vide_s`) ; quelqu'un qui revient de la salle ne déclenche rien. La caméra doit voir le visiteur venir vers elle et voir ses pieds, et les bandes doivent se toucher. Essayer sans caméra, moteur lancé (un anneau naît sur le mur 1) :
   ```bash
   .venv/bin/python -c "from pythonosc.udp_client import SimpleUDPClient as C; C('127.0.0.1', 7000).send_message('/accueil/pas', 1)"
   ```
-- Changer de caméra : mettre une partie de son nom dans `nom`. Si le nom est faux, le programme affiche la liste des caméras branchées. Deux caméras du même nom : deux blocs `[[capteurs.camera]]`, et si elles sont inversées, échanger leurs zones.
+- Changer de caméra : mettre une partie de son nom dans `nom`. Si le nom est faux, le programme affiche la liste des caméras branchées. Deux caméras du même nom : deux blocs `[[camera]]` dans le fichier du lieu, et si elles sont inversées, échanger leurs blocs.
 
 ## Les titres et les cards (étape 5)
 

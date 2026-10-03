@@ -2,7 +2,8 @@
 Il regarde les caméras, mesure dans chaque zone la présence et le mouvement, et n'envoie que
 ces chiffres en OSC à kikina.py.
 
-    python capteurs.py            # fenêtre de contrôle + envoi OSC
+    python capteurs.py            # fenêtre de contrôle + envoi OSC, caméras de la salle (lieux/salle.toml)
+    python capteurs.py maison     # les caméras d'un autre lieu (lieux/maison.toml)
     python capteurs.py --test     # autotest, sans caméra
 
 Touches dans la fenêtre : F = reprendre le fond (la salle vide, 5 s plus tard), P = photo de ce que
@@ -11,8 +12,12 @@ dans le champ), Échap = quitter.
 
 Présence = ce qui diffère du fond (la salle vide). Mouvement = ce qui diffère de l'image d'avant.
 Atelier Accueil : des bandes au sol à franchir dans l'ordre, chacune envoie `/accueil/pas` 1, 2, 3.
+Une zone dont on a cliqué le mur (outils/tracer.py) est découpée en tranches le long de ce mur : le
+moteur n'agite alors que l'endroit du mur où sont les gens.
 Les valeurs envoyées sont brutes : kikina.py les lisse.
 """
+import functools
+import json
 import sys
 import time
 import tomllib
@@ -24,6 +29,7 @@ from pythonosc.udp_client import SimpleUDPClient
 
 ICI = Path(__file__).parent
 CONFIG = ICI / "config.toml"
+LIEU = ICI / "lieux" / "salle.toml"  # les caméras et leurs zones ; `python capteurs.py maison` -> lieux/maison.toml
 LARGEUR = 320      # l'image est réduite à cette largeur avant mesure
 CAPTURE = (320, 240)  # demandé à la caméra : la mesure n'en voit pas plus, et deux caméras en 640 x 480 ne passent pas dans un même câble USB 2
 DELAI_FOND = 5     # secondes entre le lancement (ou la touche F) et la prise du fond (réglage `fond_delai_s`)
@@ -57,6 +63,45 @@ def mesurer(gris, avant, fond, rect, c):
     """(présence, mouvement) de 0 à 1 dans un rectangle, plus les parts brutes de la zone qui ont changé."""
     la, bouge = part(gris, fond, rect, c["seuil"]), part(gris, avant, rect, c["seuil"])
     return min(1.0, la / c["presence_pleine"]), min(1.0, bouge / c["energie_pleine"]), la, bouge
+
+
+@functools.lru_cache(maxsize=32)
+def etiquettes(h, w, zone, murs, n):
+    """Numéro de tranche (0 à n-1) de chaque point de la zone, -1 hors zone. Calculé une fois par réglage.
+
+    `murs` : des points au pied du mur, de gauche à droite, à intervalles égaux sur le vrai mur. Chaque point
+    de la zone prend la tranche du point de cette ligne le plus proche. `zone` et `murs` en JSON (pour le cache).
+    """
+    zone, pts = json.loads(zone), np.array(json.loads(murs), "f4") * (w, h)
+    ys, xs = np.mgrid[0:h, 0:w]
+    p = np.stack([xs + 0.5, ys + 0.5], -1).astype("f4")
+    loin, t = np.full((h, w), np.inf, "f4"), np.zeros((h, w), "f4")
+    for k, (a, b) in enumerate(zip(pts, pts[1:])):
+        u = np.clip((p - a) @ (b - a) / max(float((b - a) @ (b - a)), 1e-6), 0, 1)
+        d = np.hypot(*(p - a - u[..., None] * (b - a)).transpose(2, 0, 1))
+        plus = d < loin
+        loin[plus], t[plus] = d[plus], (k + u[plus]) / (len(pts) - 1)
+    lab = np.minimum((t * n).astype(int), n - 1)
+    dedans = np.zeros((h, w), bool)
+    dedans[decoupe(dedans, zone)] = True
+    lab[~dedans] = -1
+    return lab
+
+
+def par_tranche(gris, reference, lab, n, seuil, pleine):
+    """Part de chaque tranche qui diffère de la référence, ramenée de 0 à 1 (1 dès `pleine`)."""
+    # ponytail: une tranche lointaine est petite dans l'image, donc plus sensible au bruit ; plancher d'aire si ça fourmille
+    dedans = lab >= 0
+    change = (np.abs(gris - reference) > seuil)[dedans]
+    aire = np.bincount(lab[dedans], minlength=n)
+    return np.minimum(1.0, np.bincount(lab[dedans], weights=change, minlength=n) / np.maximum(aire, 1) / pleine)
+
+
+def point_sur(murs, t):
+    """Le point de la ligne du mur à la fraction t (0 = bout gauche, 1 = bout droit)."""
+    s = min(int(t * (len(murs) - 1)), len(murs) - 2)
+    u = t * (len(murs) - 1) - s
+    return [a + (b - a) * u for a, b in zip(murs[s], murs[s + 1])]
 
 
 class Pas:
@@ -154,6 +199,7 @@ class Camera:
         self.figee = False
         self.retournee = False  # caméra fixée tête en bas : on remet l'image à l'endroit
         self.pas, self.touchees = Pas(), []
+        self.tranches = {}  # zone : mouvement de chaque tranche, pour l'image de contrôle
         self.cap = self.identifiant = self.image = None
         self.avant = self.fond = None
         self.fond_a = self.essai = 0.0
@@ -213,8 +259,9 @@ def ouvrir_cameras(c):
     return cameras
 
 
-def dessiner(cam, gris, zones, mesures, c, bandes=()):
-    """Image de contrôle : en bleu ce qui diffère du fond, en blanc ce qui bouge, en vert les bandes des pas."""
+def dessiner(cam, gris, zones, mesures, c, bandes=(), murs=None, tranches=None):
+    """Image de contrôle : en bleu ce qui diffère du fond, en blanc ce qui bouge, en vert les bandes des pas,
+    en violet la ligne de chaque mur avec ses tranches (un disque grossit quand ça bouge dans sa tranche)."""
     vue = cv2.cvtColor(gris.astype("u1"), cv2.COLOR_GRAY2BGR)
     if cam.fond is not None:
         vue[np.abs(gris - cam.fond) > c["seuil"]] = (255, 120, 0)
@@ -232,6 +279,12 @@ def dessiner(cam, gris, zones, mesures, c, bandes=()):
         p, e, la, bouge = mesures.get(n, (0, 0, 0, 0))
         for i, ligne in enumerate((f"zone {n}", f"presence {p:.2f} ({la:.1%})", f"mouvement {e:.2f} ({bouge:.1%})")):
             cv2.putText(vue, ligne, (x0 + 10, y0 + 28 + 26 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+    for n, ligne in (murs or {}).items():
+        cv2.polylines(vue, [np.int32([(x * w, y * h) for x, y in ligne])], False, (255, 0, 255), 2)
+        e = (tranches or {}).get(n, ())
+        for i, v in enumerate(e):
+            x, y = point_sur(ligne, (i + 0.5) / len(e))
+            cv2.circle(vue, (int(x * w), int(y * h)), int(4 + 14 * v), (255, 0, 255), -1 if v > 0.05 else 1)
     for i, rect in enumerate(bandes):  # bande touchée : trait épais
         x0, y0, x1, y1 = (int(v * t) for v, t in zip(rect, (w, h, w, h)))
         touchee = i < len(cam.touchees) and cam.touchees[i]
@@ -245,14 +298,22 @@ def dessiner(cam, gris, zones, mesures, c, bandes=()):
 
 
 def lire_config():
-    return tomllib.loads(CONFIG.read_text(encoding="utf-8"))["capteurs"]
+    """Les réglages de config.toml, plus les caméras du lieu (lieux/salle.toml par défaut)."""
+    c = tomllib.loads(CONFIG.read_text(encoding="utf-8"))["capteurs"]
+    c["camera"] = tomllib.loads(LIEU.read_text(encoding="utf-8"))["camera"]
+    return c
+
+
+def dates():
+    return CONFIG.stat().st_mtime, LIEU.stat().st_mtime
 
 
 def main():
     global DELAI_FOND
     c = lire_config()
     DELAI_FOND = c["fond_delai_s"]
-    date_config = CONFIG.stat().st_mtime
+    date_config = dates()
+    print(f"Lieu : {LIEU.relative_to(ICI)}")
     cameras = ouvrir_cameras(c)
     clients = [SimpleUDPClient(v.rsplit(":", 1)[0], int(v.rsplit(":", 1)[1])) for v in c["osc_vers"]]
     print(f"OSC : envoi vers {', '.join(c['osc_vers'])}. Touches : F = reprendre le fond, P = photo, S = série de 10 photos, Échap = quitter.")
@@ -275,8 +336,8 @@ def main():
                 print(f"Photo : {chemin}")
 
     while True:
-        if CONFIG.stat().st_mtime != date_config:  # réglages relus à chaud (sauf la liste des caméras)
-            date_config = CONFIG.stat().st_mtime
+        if dates() != date_config:  # réglages et zones relus à chaud (sauf la liste des caméras)
+            date_config = dates()
             try:
                 c = lire_config()
                 DELAI_FOND = c["fond_delai_s"]
@@ -286,6 +347,7 @@ def main():
         dt, dernier = maintenant - dernier, maintenant
         lues = 0
         envoi = {}  # zone : (présence, mouvement). Une zone vue par deux caméras : la plus forte gagne.
+        tranches = {}  # zone : (présence, mouvement) de chaque tranche le long du mur, pareil
         # ponytail: caméras lues l'une après l'autre ; un fil par caméra si à 2 caméras on tombe sous 25 i/s
         for cam, k in zip(cameras, c["camera"]):
             cam.retournee = k.get("retournee", False)
@@ -317,13 +379,22 @@ def main():
                 for n, rect in k["zones"].items():
                     mesures[n] = mesurer(gris, cam.avant, cam.fond, rect, c)
                     envoi[n] = tuple(max(a, b) for a, b in zip(mesures[n][:2], envoi.get(n, (0, 0))))
+                    if n in k.get("murs", {}):  # on sait où est le mur : mesure tranche par tranche
+                        lab = etiquettes(*gris.shape, json.dumps(rect), json.dumps(k["murs"][n]), c["tranches"])
+                        t = (par_tranche(gris, cam.fond, lab, c["tranches"], c["seuil"], c["presence_pleine"]),
+                             par_tranche(gris, cam.avant, lab, c["tranches"], c["seuil"], c["energie_pleine"]))
+                        cam.tranches[n] = t[1]
+                        tranches[n] = tuple(np.maximum(a, b) for a, b in zip(t, tranches.get(n, t)))
                 if c["fond_s"] > 0:  # le fond suit lentement l'image : une lumière qui dérive ne compte pas comme quelqu'un
                     cam.fond += (gris - cam.fond) * min(1.0, dt / c["fond_s"])
-            dessiner(cam, gris, k["zones"], mesures, c, bandes)
+            dessiner(cam, gris, k["zones"], mesures, c, bandes, k.get("murs"), cam.tranches)
             cam.avant = gris
         for n, (p, e) in envoi.items():
             envoyer(f"/zone/{n}/presence", p)
             envoyer(f"/zone/{n}/energie", e)
+        for n, (p, e) in tranches.items():
+            envoyer(f"/zone/{n}/tranches/presence", [float(v) for v in p])
+            envoyer(f"/zone/{n}/tranches/energie", [float(v) for v in e])
         images += lues > 0
         if maintenant - affiche >= 2:
             # image de contrôle de chaque caméra, toujours dans le même fichier (rien ne s'accumule)
@@ -338,8 +409,9 @@ def main():
             lumieres = " ".join(f"{a:.0f}-{b:.0f}" for a, b in (cam.lumiere for cam in cameras) if a <= b)
             for cam in cameras:
                 cam.lumiere = [255.0, 0.0]
+            barre = lambda n: " " + "".join("·▁▂▃▄▅▆▇█"[round(v * 8)] for v in tranches[n][1]) if n in tranches else ""
             print(f"{images / (maintenant - affiche):4.1f} i/s   lumière {lumieres}   " +
-                  "   ".join(f"zone {n} : présence {p:.2f} mouvement {e:.2f}" for n, (p, e) in sorted(envoi.items())))
+                  "   ".join(f"zone {n} : présence {p:.2f} mouvement {e:.2f}{barre(n)}" for n, (p, e) in sorted(envoi.items())))
             affiche, images = maintenant, 0
         touche = cv2.waitKey(1) & 0xFF
         if touche == 27:
@@ -383,7 +455,15 @@ def autotest():
     p, e, *_ = mesurer(bouge, immobile, fond, gauche, c)
     assert p > 0.3 and e > 0.3, f"en mouvement : présence et mouvement, reçu {p:.2f} {e:.2f}"
     assert mesurer(bouge, immobile, fond, droite, c)[:2] == (0, 0), "la zone voisine ne doit rien voir"
-    lire_config()  # le bloc [capteurs] de config.toml existe et se lit
+    lire_config()  # le bloc [capteurs] de config.toml et les caméras de la salle existent et se lisent
+
+    # Les tranches : une silhouette au bout gauche du mur allume les premières tranches, pas la dernière.
+    lab = etiquettes(*fond.shape, json.dumps(gauche), json.dumps([[0, 0.9], [0.25, 0.9], [0.5, 0.9]]), 8)
+    assert set(np.unique(lab)) == set(range(-1, 8)), "toutes les tranches existent, et le dehors de la zone"
+    p = par_tranche(scene(20), fond, lab, 8, c["seuil"], c["presence_pleine"])
+    assert p[:2].max() > 0.5 and p[4:].max() == 0, f"silhouette à gauche : {np.round(p, 2)}"
+    p = par_tranche(scene(250), fond, lab, 8, c["seuil"], c["presence_pleine"])
+    assert p[6:].max() > 0.5 and p[:4].max() == 0, f"silhouette à droite du mur : {np.round(p, 2)}"
 
     # Les pas : bandes 1, 2, 3 dans l'ordre. `marche` = liste de (instant, bandes touchées).
     def marche(etapes, pas=None):
@@ -424,4 +504,9 @@ def autotest():
 
 
 if __name__ == "__main__":
+    lieux = [a for a in sys.argv[1:] if not a.startswith("-")]
+    if lieux:
+        LIEU = ICI / "lieux" / f"{lieux[0]}.toml"
+        if not LIEU.exists():
+            raise SystemExit(f"Lieu '{lieux[0]}' inconnu. Lieux : " + ", ".join(f.stem for f in sorted(LIEU.parent.glob("*.toml"))))
     autotest() if "--test" in sys.argv else main()

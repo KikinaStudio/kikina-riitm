@@ -1,0 +1,14 @@
+# Les caméras de ce lieu. Écrit par outils/tracer.py : refaire le tracé plutôt que modifier à la main.
+# Coordonnées de 0 à 1 dans l'image de la caméra (0, 0 = en haut à gauche).
+# nom : une partie du nom de la caméra (deux caméras du même nom : la 1re du fichier prend la 1re branchée).
+# retournee : true si la caméra est fixée tête en bas.
+# zones : le sol devant chaque mur (1 Accueil, 2 Densité, 3 Mouvement, 4 Proximité),
+#   polygone [[x, y], ...] ou rectangle [gauche, haut, droite, bas]. Une même zone vue par 2 caméras : la plus forte mesure.
+# murs : points au pied du mur, bout gauche, milieu, bout droit (vus face au mur). Sans eux, la zone agite tout son mur.
+# pas : les bandes au sol de l'Accueil [gauche, haut, droite, bas], dans l'ordre où on les franchit.
+
+[[camera]]
+nom = "HD USB Camera"
+retournee = false
+note = "Pièce de Jérémie, caméra en hauteur (essais du 3 octobre)."
+zones = {  }
