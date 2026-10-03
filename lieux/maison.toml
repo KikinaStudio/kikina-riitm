@@ -10,5 +10,6 @@
 [[camera]]
 nom = "HD USB Camera"
 retournee = false
-note = "Pièce de Jérémie, caméra en hauteur (essais du 3 octobre)."
-zones = {  }
+note = "Pièce de Jérémie, caméra en hauteur (essais du 3 octobre). Mur du fond (2) retiré : une caméra ne sait pas si quelqu'un dans son axe est près du mur du fond."
+zones = { 1 = [[0.438, 0.197], [0.451, 0.576], [0.396, 0.993], [0.009, 0.986], [0.01, 0.136], [0.436, 0.196]], 4 = [[0.718, 0.239], [0.692, 0.583], [0.817, 0.983], [0.988, 0.725], [0.982, 0.367], [0.958, 0.287], [0.723, 0.236]] }
+murs = { 1 = [[0.396, 0.993], [0.435, 0.701], [0.451, 0.576]], 4 = [[0.692, 0.583], [0.73, 0.703], [0.817, 0.983]] }

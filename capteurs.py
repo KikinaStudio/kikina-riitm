@@ -53,6 +53,13 @@ def decoupe(image, rect):
     return np.s_[int(y0 * h):max(int(y1 * h), int(y0 * h) + 1), int(x0 * w):max(int(x1 * w), int(x0 * w) + 1)]
 
 
+def eclairer(fond, gris):
+    """Le fond ramené à la lumière d'ensemble de l'image (rapport des médianes) : un nuage, le soleil ou
+    l'exposition changent toute l'image et ne comptent pas comme quelqu'un. Tant que les gens couvrent
+    moins de la moitié de l'image, ils ne déplacent pas la médiane."""
+    return fond * (float(np.median(gris)) / max(float(np.median(fond)), 1.0))
+
+
 def part(gris, reference, rect, seuil):
     """Part du rectangle (0 à 1) qui diffère de l'image de référence."""
     z = decoupe(gris, rect)
@@ -264,7 +271,7 @@ def dessiner(cam, gris, zones, mesures, c, bandes=(), murs=None, tranches=None):
     en violet la ligne de chaque mur avec ses tranches (un disque grossit quand ça bouge dans sa tranche)."""
     vue = cv2.cvtColor(gris.astype("u1"), cv2.COLOR_GRAY2BGR)
     if cam.fond is not None:
-        vue[np.abs(gris - cam.fond) > c["seuil"]] = (255, 120, 0)
+        vue[np.abs(gris - cam.fond_vu) > c["seuil"]] = (255, 120, 0)
         vue[np.abs(gris - cam.avant) > c["seuil"]] = (255, 255, 255)
     vue = cv2.resize(vue, None, fx=3, fy=3, interpolation=cv2.INTER_NEAREST)
     h, w = vue.shape[:2]
@@ -281,6 +288,8 @@ def dessiner(cam, gris, zones, mesures, c, bandes=(), murs=None, tranches=None):
             cv2.putText(vue, ligne, (x0 + 10, y0 + 28 + 26 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
     for n, ligne in (murs or {}).items():
         cv2.polylines(vue, [np.int32([(x * w, y * h) for x, y in ligne])], False, (255, 0, 255), 2)
+        for (x, y), texte in ((ligne[0], "G"), (ligne[-1], "D"), (ligne[len(ligne) // 2], f"mur {n}")):
+            cv2.putText(vue, texte, (int(x * w) + 6, int(y * h) - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 255), 2)
         e = (tranches or {}).get(n, ())
         for i, v in enumerate(e):
             x, y = point_sur(ligne, (i + 0.5) / len(e))
@@ -370,18 +379,19 @@ def main():
             mesures = {}
             bandes = k.get("pas", [])
             if cam.fond is not None:
+                fond = cam.fond_vu = eclairer(cam.fond, gris)
                 if bandes:
-                    cam.touchees = [part(gris, cam.fond, b, c["seuil"]) > c["pas_seuil"] for b in bandes]
+                    cam.touchees = [part(gris, fond, b, c["seuil"]) > c["pas_seuil"] for b in bandes]
                     pas = cam.pas.avancer(cam.touchees, maintenant, c["pas_vide_s"])
                     if pas:
                         envoyer("/accueil/pas", pas)
                         print(f"Pas {pas}")
                 for n, rect in k["zones"].items():
-                    mesures[n] = mesurer(gris, cam.avant, cam.fond, rect, c)
+                    mesures[n] = mesurer(gris, cam.avant, fond, rect, c)
                     envoi[n] = tuple(max(a, b) for a, b in zip(mesures[n][:2], envoi.get(n, (0, 0))))
                     if n in k.get("murs", {}):  # on sait où est le mur : mesure tranche par tranche
                         lab = etiquettes(*gris.shape, json.dumps(rect), json.dumps(k["murs"][n]), c["tranches"])
-                        t = (par_tranche(gris, cam.fond, lab, c["tranches"], c["seuil"], c["presence_pleine"]),
+                        t = (par_tranche(gris, fond, lab, c["tranches"], c["seuil"], c["presence_pleine"]),
                              par_tranche(gris, cam.avant, lab, c["tranches"], c["seuil"], c["energie_pleine"]))
                         cam.tranches[n] = t[1]
                         tranches[n] = tuple(np.maximum(a, b) for a, b in zip(t, tranches.get(n, t)))
@@ -452,6 +462,9 @@ def autotest():
     assert mesurer(vide, scene(None), fond, gauche, c)[:2] == (0, 0), "le grain seul ne doit rien déclencher"
     p, e, *_ = mesurer(immobile, scene(100), fond, gauche, c)
     assert p > 0.3 and e == 0, f"immobile : présence sans mouvement, reçu {p:.2f} {e:.2f}"
+    plus_clair = lambda g: (g * 1.4).clip(0, 255)  # un nuage passe, toute l'image s'éclaire de 40 %
+    assert mesurer(plus_clair(vide), plus_clair(vide), eclairer(fond, plus_clair(vide)), gauche, c)[0] == 0, "la lumière d'ensemble ne doit rien déclencher"
+    assert mesurer(plus_clair(immobile), plus_clair(immobile), eclairer(fond, plus_clair(immobile)), gauche, c)[0] > 0.3, "plus clair, on voit encore la personne"
     p, e, *_ = mesurer(bouge, immobile, fond, gauche, c)
     assert p > 0.3 and e > 0.3, f"en mouvement : présence et mouvement, reçu {p:.2f} {e:.2f}"
     assert mesurer(bouge, immobile, fond, droite, c)[:2] == (0, 0), "la zone voisine ne doit rien voir"

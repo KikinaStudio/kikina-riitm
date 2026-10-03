@@ -25,6 +25,15 @@ Jérémie : quand un visiteur s'approche d'un mur, la matière doit s'agiter à 
 - Salle : les murs ne sont pas encore tracés. Chaque zone doit avoir sa ligne de mur sur chaque caméra qui la voit, sinon cette caméra ne compte pas pour la position. Possible sur les photos du 1er octobre si les caméras n'ont pas bougé.
 - Calibrage de l'excitation à faire : en musique dense, l'agitation est déjà au maximum et l'effet du visiteur se voit à peine (seuls le soulèvement et l'éclat restent).
 
+### Essai chez Jérémie (après-midi)
+- La caméra a décroché une fois (0 i/s) : repartie après débranchement et rebranchement. Piège : une commande tapée dans un onglet où un programme tourne encore part dans ce programme ; toujours Ctrl + C d'abord.
+- Lumière du jour qui dérive (124 à 190 en 40 s) : présence à 1.00 partout. Corrigé : le fond est ramené à la lumière d'ensemble de l'image (rapport des médianes, `eclairer`) avant comparaison. Autotest : un nuage (+40 %) ne déclenche rien, une personne immobile est toujours vue.
+- Outil de tracé : les clics des lignes de mur n'ont pas été pris (cause pas trouvée) ; Jérémie a été agacé. Lignes posées par moi sur les bords de ses zones (le pied des murs). Lignes étiquetées « mur N » ; Entrée juste après le numéro garde la zone.
+- **Constat de Jérémie** : une caméra qui regarde le long de la pièce compte comme « près du mur du fond » toute personne dans son axe. Et le bout lointain des murs de côté est peu fiable.
+- **Décidé (idée de Jérémie)** : 2 caméras face à face. Chacune surveille la moitié proche des deux murs de côté et le sol à ses pieds (le mur où elle est posée), jamais le mur d'en face. Rien à programmer, seulement le tracé. Salle : caméra 2 à déplacer au centre du mur 4 (Proximité), face à la caméra 1 (centre du mur 2) ; vérifier que la caméra qui voit l'entrée voit les pieds pour les 3 pas. Jérémie retourne dans la salle avant le 5.
+- Chez lui : zone du mur du fond retirée, murs de gauche (1) et de droite (4) : **la réaction suit bien la position le long du mur** (Jérémie : « je crois que ça marche bien »).
+- Reste : calibrer l'intensité (calme, moyen, dense), tracer la salle avec la nouvelle position des caméras.
+
 ### Comment relancer
 ```bash
 cd "/Users/leon/RIITM final"

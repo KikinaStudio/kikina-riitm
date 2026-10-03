@@ -7,9 +7,10 @@
     python outils/tracer.py --test            # autotest de l'écriture du fichier
 
 Dans la fenêtre :
-    1 2 3 4   la zone de cet atelier : cliquer les coins du sol devant le mur, Entrée pour fermer.
-              Puis 3 clics au pied du mur : bout gauche, milieu, bout droit (gauche et droite vus face au mur,
-              depuis le centre de la pièce). Entrée sans clic : pas de ligne, la zone agite tout son mur.
+    1 2 3 4   la zone de cet atelier : cliquer les coins du sol devant le mur, Entrée pour fermer
+              (Entrée sans clic : on garde la zone telle quelle). Puis 3 clics au pied de CE mur : bout gauche,
+              milieu, bout droit (gauche et droite vus face au mur, depuis le centre de la pièce).
+              Entrée sans clic : pas de ligne, la zone agite tout son mur.
     B         les 3 bandes des pas de l'Accueil : 2 coins opposés par bande, dans l'ordre où on les franchit.
     Retour arrière : annuler le dernier clic.   S : enregistrer.   Échap : quitter.
 """
@@ -93,12 +94,10 @@ def main(lieu, num, photo):
             if valeur:
                 cam["zones"][n] = valeur
                 etat["mode"], etat["points"] = ("mur", n), []
-                dire(f"Zone {n} {ATELIERS[n]} : 3 clics au pied du mur, bout gauche, milieu, bout droit "
+                dire(f"Mur {n} {ATELIERS[n]} : 3 clics au pied de CE mur, bout gauche, milieu, bout droit "
                      "(Entrée : pas de ligne, tout le mur)")
                 return
-            cam["zones"].pop(n, None)
-            cam["murs"].pop(n, None)
-            dire(f"Zone {n} supprimée")
+            dire(f"Zone {n} : pas de zone, rien à faire")
         elif mode == "mur":
             if valeur:
                 cam["murs"][n] = valeur
@@ -140,7 +139,7 @@ def main(lieu, num, photo):
             cv2.putText(vue, sans_accents(f"{n} {ATELIERS.get(n, '')}"), (x0 + 6, y0 + 24), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
         for n, m in cam["murs"].items():
             cv2.polylines(vue, [vers_image(m)], False, (255, 0, 255), 3)
-            for p, lettre in ((m[0], "G"), (m[-1], "D")):
+            for p, lettre in ((m[0], "G"), (m[-1], "D"), (m[len(m) // 2], f"mur {n}")):
                 cv2.putText(vue, lettre, tuple(vers_image([p])[0] + (6, -6)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 255), 2)
         for i, r in enumerate(cam.get("pas", [])):
             cv2.rectangle(vue, (int(r[0] * w), int(r[1] * h)), (int(r[2] * w), int(r[3] * h)), (0, 255, 0), 2)
@@ -164,7 +163,7 @@ def main(lieu, num, photo):
         if chr(touche) in ATELIERS:
             n = chr(touche)
             etat["mode"], etat["points"] = ("zone", n), []
-            dire(f"Zone {n} {ATELIERS[n]} : clique les coins du sol devant le mur, puis Entrée (Entrée tout de suite : supprimer)")
+            dire(f"Zone {n} {ATELIERS[n]} : clique les coins du sol devant le mur, puis Entrée (Entrée tout de suite : garder la zone)")
         elif touche in (ord("b"), ord("B")):
             etat["mode"], etat["points"] = ("pas", None), []
             dire("Bandes des pas : 2 coins opposés par bande, la 1re franchie en entrant d'abord (3 bandes)")
@@ -172,6 +171,8 @@ def main(lieu, num, photo):
             pts = etat["points"]
             if etat["mode"][0] == "zone" and 0 < len(pts) < 3:
                 dire("Une zone demande au moins 3 coins")
+            elif etat["mode"][0] == "zone" and not pts:  # on garde la zone, on passe à la ligne de son mur
+                finir(cam["zones"].get(etat["mode"][1]))
             else:
                 finir(pts if len(pts) >= (3 if etat["mode"][0] == "zone" else 2) else None)
         elif touche in (8, 127) and etat["points"]:
