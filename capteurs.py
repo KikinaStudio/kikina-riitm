@@ -19,6 +19,7 @@ Les valeurs envoyées sont brutes : kikina.py les lisse.
 import functools
 import json
 import sys
+import threading
 import time
 import tomllib
 from pathlib import Path
@@ -33,6 +34,7 @@ LIEU = ICI / "lieux" / "salle.toml"  # les caméras et leurs zones ; `python cap
 LARGEUR = 320      # l'image est réduite à cette largeur avant mesure
 CAPTURE = (320, 240)  # demandé à la caméra : la mesure n'en voit pas plus, et deux caméras en 640 x 480 ne passent pas dans un même câble USB 2
 DELAI_FOND = 5     # secondes entre le lancement (ou la touche F) et la prise du fond (réglage `fond_delai_s`)
+NOUVELLE = threading.Event()  # une caméra vient de livrer une image
 
 
 def preparer(image):
@@ -207,20 +209,24 @@ class Camera:
         self.retournee = False  # caméra fixée tête en bas : on remet l'image à l'endroit
         self.pas, self.touchees = Pas(), []
         self.tranches = {}  # zone : mouvement de chaque tranche, pour l'image de contrôle
-        self.cap = self.identifiant = self.image = None
+        self.cap = self.identifiant = self.image = self.nouvelle = None
         self.avant = self.fond = None
-        self.fond_a = self.essai = 0.0
+        self.fond_a = self.essai = self.recue = 0.0
+        self.envoi, self.envoi_tranches = {}, {}  # dernières mesures de cette caméra, par zone
+        self.images, self.dernier = 0, time.monotonic()  # images comptées pour l'affichage, date de la dernière mesurée
         self.lumiere = [255.0, 0.0]  # gris moyen le plus sombre et le plus clair depuis le dernier affichage
 
-    def ouvrir(self, prises):
+    def ouvrir(self, prises, premiere=False):
         """Cherche la caméra par son nom et l'ouvre. `prises` : identifiants tenus par les autres caméras."""
         self.essai = time.monotonic()
-        if self.cap is not None:
-            self.cap.release()
-        self.cap = self.identifiant = None
+        self.cap = self.identifiant = None  # l'ancien fil relâche lui-même l'ancienne caméra (il peut être bloqué dans une lecture)
+        self.envoi, self.envoi_tranches = {}, {}
         for nom, numero, pilote, identifiant in lister_cameras():
             if self.cherche.lower() in nom.lower() and identifiant not in prises:
                 cap = cv2.VideoCapture(numero, pilote)
+                if not cap.isOpened() and not premiere:  # en cours de route : on ne quitte jamais, on réessaie
+                    print(f"Caméra '{nom}' : impossible de la rouvrir, je réessaie dans 2 s")
+                    return False
                 if not cap.isOpened():
                     raise SystemExit(f"Caméra '{nom}' : impossible de l'ouvrir. macOS : Réglages Système > "
                                      "Confidentialité et sécurité > Caméra, autoriser l'application d'où ce programme "
@@ -231,6 +237,7 @@ class Camera:
                 self.avant = self.fond = None
                 self.pas, self.touchees = Pas(), []
                 self.fond_a = time.monotonic() + DELAI_FOND
+                threading.Thread(target=self.lecture, args=(cap,), daemon=True).start()
                 print(f"J'ouvre : {numero} {nom}")
                 self.exposition(False)
                 return True
@@ -241,13 +248,25 @@ class Camera:
         self.figee = figee
         print(f"{self.titre} '{self.cherche}' : {regler(self.identifiant, self.ips, figee)}")
 
+    def lecture(self, cap):
+        """Le fil de cette caméra : il lit sans arrêt et garde la dernière image. Une caméra muette ne bloque que son fil."""
+        while self.cap is cap:
+            ok, image = cap.read()
+            if ok and self.cap is cap:
+                self.nouvelle, self.recue = image, time.monotonic()
+                NOUVELLE.set()
+            elif not ok:
+                time.sleep(0.1)
+        cap.release()
+
     def lire(self, prises):
-        """Petite image grise, ou None si la caméra ne répond pas (on la recherche toutes les 2 s)."""
-        ok, image = self.cap.read() if self.cap is not None else (False, None)
-        if ok:
+        """La petite image grise arrivée depuis la dernière fois, ou None (muette 2 s : on la recherche)."""
+        image, self.nouvelle = self.nouvelle, None
+        if image is not None:
+            self.images += 1
             self.image = cv2.rotate(image, cv2.ROTATE_180) if self.retournee else image
             return preparer(self.image)
-        if time.monotonic() - self.essai > 2:
+        if time.monotonic() - max(self.recue, self.essai) > 2:
             print(f"Caméra '{self.cherche}' muette ou débranchée, je la cherche...")
             self.ouvrir(prises)
         return None
@@ -260,7 +279,7 @@ def ouvrir_cameras(c):
     for k in c["camera"]:  # deux caméras du même nom : la 1re du fichier prend la 1re trouvée, etc.
         cam = Camera(k["nom"], c["ips"])
         cam.titre = f"camera{len(cameras) + 1}"  # comme les photos
-        if not cam.ouvrir({a.identifiant for a in cameras}):
+        if not cam.ouvrir({a.identifiant for a in cameras}, premiere=True):
             raise SystemExit(f"Caméra '{k['nom']}' introuvable parmi les caméras branchées.")
         cameras.append(cam)
     return cameras
@@ -306,6 +325,18 @@ def dessiner(cam, gris, zones, mesures, c, bandes=(), murs=None, tranches=None):
     cam.vue = vue
 
 
+def combiner(cameras):
+    """Une zone vue par plusieurs caméras : la plus forte mesure gagne (on n'additionne jamais : une personne
+    vue par deux caméras ne compte pas double). Pareil tranche par tranche le long du mur."""
+    envoi, tranches = {}, {}
+    for cam in cameras:
+        for n, v in cam.envoi.items():
+            envoi[n] = tuple(max(a, b) for a, b in zip(v, envoi.get(n, (0, 0))))
+        for n, t in cam.envoi_tranches.items():
+            tranches[n] = tuple(np.maximum(a, b) for a, b in zip(t, tranches.get(n, t)))
+    return envoi, tranches
+
+
 def lire_config():
     """Les réglages de config.toml, plus les caméras du lieu (lieux/salle.toml par défaut)."""
     c = tomllib.loads(CONFIG.read_text(encoding="utf-8"))["capteurs"]
@@ -331,8 +362,7 @@ def main():
         for client in clients:
             client.send_message(adresse, valeur)
 
-    dernier = affiche = time.monotonic()
-    images = 0
+    affiche = time.monotonic()
     refaire_fond = False
     serie_fin = serie_suivante = 0.0
 
@@ -345,6 +375,8 @@ def main():
                 print(f"Photo : {chemin}")
 
     while True:
+        NOUVELLE.wait(0.05)  # chaque caméra lit dans son fil : on attend qu'une d'elles livre une image
+        NOUVELLE.clear()
         if dates() != date_config:  # réglages et zones relus à chaud (sauf la liste des caméras)
             date_config = dates()
             try:
@@ -353,11 +385,7 @@ def main():
             except (tomllib.TOMLDecodeError, KeyError) as err:
                 print(f"config.toml illisible, je garde les anciens réglages : {err}")
         maintenant = time.monotonic()
-        dt, dernier = maintenant - dernier, maintenant
         lues = 0
-        envoi = {}  # zone : (présence, mouvement). Une zone vue par deux caméras : la plus forte gagne.
-        tranches = {}  # zone : (présence, mouvement) de chaque tranche le long du mur, pareil
-        # ponytail: caméras lues l'une après l'autre ; un fil par caméra si à 2 caméras on tombe sous 25 i/s
         for cam, k in zip(cameras, c["camera"]):
             cam.retournee = k.get("retournee", False)
             gris = cam.lire({a.identifiant for a in cameras if a is not cam})
@@ -366,8 +394,10 @@ def main():
                     noir = np.zeros((720, 960, 3), "u1")
                     cv2.putText(noir, "Camera debranchee, je la cherche...", (40, 360), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2)
                     cv2.imshow(cam.titre, noir)
+                    cam.envoi, cam.envoi_tranches = {}, {}
                 continue
             lues += 1
+            dt, cam.dernier = maintenant - cam.dernier, maintenant
             cam.lumiere = [min(cam.lumiere[0], float(gris.mean())), max(cam.lumiere[1], float(gris.mean()))]
             if cam.avant is None:
                 cam.avant = gris
@@ -377,6 +407,7 @@ def main():
                 cam.fond = gris.copy()
                 print(f"Fond repris ({cam.titre})")
             mesures = {}
+            cam.envoi, cam.envoi_tranches = {}, {}
             bandes = k.get("pas", [])
             if cam.fond is not None:
                 fond = cam.fond_vu = eclairer(cam.fond, gris)
@@ -388,41 +419,48 @@ def main():
                         print(f"Pas {pas}")
                 for n, rect in k["zones"].items():
                     mesures[n] = mesurer(gris, cam.avant, fond, rect, c)
-                    envoi[n] = tuple(max(a, b) for a, b in zip(mesures[n][:2], envoi.get(n, (0, 0))))
+                    cam.envoi[n] = mesures[n][:2]
                     if n in k.get("murs", {}):  # on sait où est le mur : mesure tranche par tranche
                         lab = etiquettes(*gris.shape, json.dumps(rect), json.dumps(k["murs"][n]), c["tranches"])
                         t = (par_tranche(gris, fond, lab, c["tranches"], c["seuil"], c["presence_pleine"]),
                              par_tranche(gris, cam.avant, lab, c["tranches"], c["seuil"], c["energie_pleine"]))
                         cam.tranches[n] = t[1]
-                        tranches[n] = tuple(np.maximum(a, b) for a, b in zip(t, tranches.get(n, t)))
+                        cam.envoi_tranches[n] = t
                 if c["fond_s"] > 0:  # le fond suit lentement l'image : une lumière qui dérive ne compte pas comme quelqu'un
                     cam.fond += (gris - cam.fond) * min(1.0, dt / c["fond_s"])
             dessiner(cam, gris, k["zones"], mesures, c, bandes, k.get("murs"), cam.tranches)
             cam.avant = gris
-        for n, (p, e) in envoi.items():
-            envoyer(f"/zone/{n}/presence", p)
-            envoyer(f"/zone/{n}/energie", e)
-        for n, (p, e) in tranches.items():
-            envoyer(f"/zone/{n}/tranches/presence", [float(v) for v in p])
-            envoyer(f"/zone/{n}/tranches/energie", [float(v) for v in e])
-        images += lues > 0
+        envoi, tranches = combiner(cameras)
+        if lues:
+            for n, (p, e) in envoi.items():
+                envoyer(f"/zone/{n}/presence", p)
+                envoyer(f"/zone/{n}/energie", e)
+            for n, (p, e) in tranches.items():
+                envoyer(f"/zone/{n}/tranches/presence", [float(v) for v in p])
+                envoyer(f"/zone/{n}/tranches/energie", [float(v) for v in e])
         if maintenant - affiche >= 2:
             # image de contrôle de chaque caméra, toujours dans le même fichier (rien ne s'accumule)
             for cam in cameras:
                 if getattr(cam, "vue", None) is not None:
                     cv2.imwrite(str(ICI / "captures" / f"direct_{cam.titre}.jpg"), cam.vue)
-            # fichier captures/refaire_fond : comme la touche F (pour la reprendre à distance)
+            # fichiers captures/refaire_fond et captures/photo : comme les touches F et P (à distance)
             if (ICI / "captures" / "refaire_fond").exists():
                 (ICI / "captures" / "refaire_fond").unlink()
                 refaire_fond = True
+            if (ICI / "captures" / "photo").exists():  # pareil pour la touche P
+                (ICI / "captures" / "photo").unlink()
+                photo()
             # lumière : si l'écart entre le plus sombre et le plus clair est grand alors que rien ne bouge, l'image clignote
             lumieres = " ".join(f"{a:.0f}-{b:.0f}" for a, b in (cam.lumiere for cam in cameras) if a <= b)
             for cam in cameras:
                 cam.lumiere = [255.0, 0.0]
             barre = lambda n: " " + "".join("·▁▂▃▄▅▆▇█"[round(v * 8)] for v in tranches[n][1]) if n in tranches else ""
-            print(f"{images / (maintenant - affiche):4.1f} i/s   lumière {lumieres}   " +
+            cadences = " ".join(f"{cam.images / (maintenant - affiche):4.1f}" for cam in cameras)
+            for cam in cameras:
+                cam.images = 0
+            print(f"{cadences} i/s   lumière {lumieres}   " +
                   "   ".join(f"zone {n} : présence {p:.2f} mouvement {e:.2f}{barre(n)}" for n, (p, e) in sorted(envoi.items())))
-            affiche, images = maintenant, 0
+            affiche = maintenant
         touche = cv2.waitKey(1) & 0xFF
         if touche == 27:
             break
@@ -442,8 +480,8 @@ def main():
                 cam.exposition(False)  # la caméra recherche sa luminosité, puis on la fige de nouveau
             print(f"Sortez du champ : fond repris dans {DELAI_FOND} s")
     for cam in cameras:
-        if cam.cap is not None:
-            cam.cap.release()
+        cam.cap = None  # chaque fil relâche sa caméra
+    time.sleep(0.3)
 
 
 def autotest():
@@ -497,8 +535,15 @@ def autotest():
     class Faux:
         def __init__(self, numero, pilote):
             ouvertes.append(numero)
+            self.numero = numero
         isOpened = lambda self: True
         set = release = lambda self, *a: None
+
+        def read(self):
+            if self.numero == 9:  # caméra muette : la lecture ne revient jamais
+                threading.Event().wait()
+            time.sleep(1 / 30)
+            return True, np.full((240, 320, 3), 40, "u1")
 
     vrais = cv2.VideoCapture, lister_cameras
     cv2.VideoCapture = Faux
@@ -511,8 +556,30 @@ def autotest():
         lister_cameras = lambda: [("FaceTime HD Camera", 0, 0, "mac"), ("HD USB Camera", 1, 0, "usb2")]  # rebranchée ailleurs
         assert cam.ouvrir(set()) and ouvertes == [0, 1]
         assert not Camera("usb cam").ouvrir({"usb2"}), "deux caméras du même nom ont pris le même appareil"
+
+        # Chaque caméra lit dans son propre fil : une caméra muette ne fige pas l'autre.
+        lister_cameras = lambda: [("HD USB Camera", 9, 0, "muette"), ("HD USB Camera", 3, 0, "vivante")]
+        muette, vivante = Camera("usb cam"), Camera("usb cam")
+        assert muette.ouvrir(set()) and vivante.ouvrir({"muette"})
+        fin, lues = time.monotonic() + 0.5, 0
+        while time.monotonic() < fin:
+            NOUVELLE.wait(0.05)
+            NOUVELLE.clear()
+            lues += vivante.lire({"muette"}) is not None
+            assert muette.nouvelle is None
+        assert lues >= 8, f"la caméra vivante n'a livré que {lues} images en 0,5 s"
+        muette.cap = vivante.cap = None
     finally:
         cv2.VideoCapture, lister_cameras = vrais
+
+    # Deux caméras voient la même zone : la plus forte mesure, jamais la somme.
+    a, b = Camera("a"), Camera("b")
+    a.envoi, b.envoi = {"1": (0.6, 0.2), "3": (0.1, 0.0)}, {"1": (0.4, 0.5)}
+    a.envoi_tranches = {"1": (np.array([0.0, 0.8]), np.array([0.1, 0.1]))}
+    b.envoi_tranches = {"1": (np.array([0.5, 0.2]), np.array([0.0, 0.9]))}
+    envoi, tranches = combiner([a, b])
+    assert envoi == {"1": (0.6, 0.5), "3": (0.1, 0.0)}, envoi
+    assert list(tranches["1"][0]) == [0.5, 0.8] and list(tranches["1"][1]) == [0.1, 0.9], tranches
     print("autotest OK")
 
 

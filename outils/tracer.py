@@ -148,7 +148,7 @@ def main(lieu, num, photo):
             cv2.polylines(vue, [vers_image(etat["points"])], False, (0, 0, 255), 2)
             for p in vers_image(etat["points"]):
                 cv2.circle(vue, tuple(p), 5, (0, 0, 255), -1)
-        cv2.rectangle(vue, (0, 0), (w, 34), (0, 0, 0), -1)
+        cv2.rectangle(vue, (0, 0), (w, 34), (0, 0, 170) if etat["mode"] and etat["mode"][0] == "mur" else (0, 0, 0), -1)  # rouge : on attend la ligne du mur
         cv2.putText(vue, sans_accents(etat["message"])[:110], (8, 23), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
         cv2.imshow(titre, vue)
 
@@ -160,7 +160,12 @@ def main(lieu, num, photo):
                 continue
             break
         etat["quitter"] = False
-        if chr(touche) in ATELIERS:
+        en_cours = etat["mode"] and (etat["points"] or etat["mode"][0] == "mur")
+        if (chr(touche) in ATELIERS or touche in (ord("b"), ord("B"))) and en_cours:  # on ne saute pas une étape sans le voir
+            mode, n = etat["mode"]
+            dire(f"Mur {n} pas fini : 3 clics au pied du mur (bout gauche, milieu, bout droit), ou Entrée pour s'en passer"
+                 if mode == "mur" else "Tracé en cours : Entrée pour fermer la zone, ou Retour arrière pour effacer les clics")
+        elif chr(touche) in ATELIERS:
             n = chr(touche)
             etat["mode"], etat["points"] = ("zone", n), []
             dire(f"Zone {n} {ATELIERS[n]} : clique les coins du sol devant le mur, puis Entrée (Entrée tout de suite : garder la zone)")

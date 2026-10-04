@@ -4,6 +4,29 @@
 
 ---
 
+## 4 octobre 2026 - Essai à deux caméras face à face (autre pièce, chez Jérémie)
+
+### Ce qui a été fait
+- Nouveau lieu `lieux/essai.toml` (`capteurs.py essai`), deux caméras retournées (`retournee = true`) face à face. Caméra 1 posée sur le mur 3 : côtés 1 (gauche) et 2 (droite), sol à ses pieds = 3. Caméra 2 posée sur le mur 4 : côtés 1 (droite) et 2 (gauche), sol à ses pieds = 4. Pas de mur du fond. Zones de côté tracées par Jérémie, lignes de mur et zones « sol au pied de la caméra » posées par moi (`captures/trace_essai*.jpg`).
+- **Lecture en parallèle** (`capteurs.py`) : chaque caméra lit dans son propre fil. Avec 2 caméras : 29,5 i/s chacune au lieu de 15 en tout. Une caméra muette ne fige plus les autres, et une caméra qu'on n'arrive pas à rouvrir en cours de route ne fait plus quitter le programme. Les mesures de chaque caméra sont gardées et combinées (la plus forte gagne, jamais la somme). Console : une cadence par caméra.
+- Fichier `captures/photo` = touche P à distance (comme `captures/refaire_fond`).
+- `outils/tracer.py` : la ligne du mur sautait sans prévenir quand on appuyait sur le numéro suivant après Entrée (cause des « clics pas pris » du 3 octobre). Le bandeau devient rouge tant que la ligne manque, et on ne peut plus passer à la suite sans elle (ou Entrée pour s'en passer).
+
+### Ce qui reste fragile
+- **Faux de ma part le 3 octobre** (« rien à programmer ») : le moteur étale la ligne cliquée sur tout le mur. Pour qu'une caméra ne couvre que la moitié proche des murs de côté, il faut dire au programme quelle moitié couvre chaque ligne. Pas encore fait.
+- Milieu des lignes de mur placé à l'estime (la perspective rapproche le milieu réel du fond de l'image).
+- Mac sur batterie à 7 % pendant l'essai : à brancher systématiquement.
+- Idée de Jérémie : 3e caméra au-dessus de la porte pour les 3 notes (bandes existantes) et le comptage des entrées/sorties (à écrire, approximatif pour un groupe serré). Faisable côté débit USB. Pas commencé.
+
+### Comment relancer
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/python capteurs.py essai          # dans le panneau Terminal de l'app (autorisation caméra)
+.venv/bin/python outils/tracer.py essai 2   # tracer la caméra 2 sur sa dernière photo
+```
+
+---
+
 ## 3 octobre 2026 - Agitation localisée le long du mur (essais chez Jérémie)
 
 ### Pourquoi
