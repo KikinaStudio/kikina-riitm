@@ -265,6 +265,8 @@ class Camera:
         self.fond_a = self.essai + DELAI_FOND
         self.fil = threading.Thread(target=self.lecture, args=(cap,), daemon=True)
         self.fil.start()
+        self.vue = np.zeros((720, 960, 3), "u1")  # pas d'ancienne image : on voit tout de suite si elle livre ou non
+        cv2.putText(self.vue, "Ouverte, j'attends sa premiere image...", (40, 360), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (0, 0, 255), 2)
         self.exposition(False)
 
     def exposition(self, figee):
