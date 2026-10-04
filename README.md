@@ -6,6 +6,11 @@ Ce dossier produit un flux vidéo NDI nommé `KIKINA` (le bandeau 360 de la sall
 - `cartes.py` : les titres des ateliers et les cards. `python cartes.py` vérifie leur placement et dessine `captures/plan_cards.png`.
 - `capteurs.py` : les caméras. Programme à part, qui envoie la présence et le mouvement de chaque zone au moteur. `python capteurs.py --test` lance son autotest.
 - `test_ndi.py` : le test du tuyau NDI, à relancer sur chaque nouvelle machine.
+- `audio_live.py` : pont OSC vers Ableton (volume du piano, notes de gestes/pas, texture optionnelle). Installation et mapping : [audio live](docs/audio-live.md). Dépendances séparées dans `requirements-audio.txt`.
+
+**Transférer tout le show sur un autre Mac (M2 Pro 16 Go, 3 webcams, Ableton et NDI)** :
+[guide de transfert et de répétition](docs/show-mac.md), avec export WAV du fond sonore,
+reconnexion MIDI, retour audio et vérification des performances.
 
 Le "Terminal" (macOS) ou "PowerShell" (Windows) est la fenêtre où l'on tape des commandes.
 On tape une ligne, puis Entrée.

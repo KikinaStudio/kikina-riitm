@@ -4,6 +4,42 @@
 
 ---
 
+## 4 octobre 2026 - Transfert du show vers un autre M2 Pro 16 Go
+
+- Précision d'Arthur : **un seul Mac de remplacement** fera tourner les 3 webcams, Ableton et tout Kikina/NDI. Ce n'est pas un montage à deux machines. Adresses OSC conservées en localhost.
+- Nouveau guide `docs/show-mac.md` : fichiers à transférer, export WAV du fond statique et éventuellement du piano répétitif, conservation d'un instrument pour les notes de gestes, Collect All and Save, plug-in/bibliothèque Splice à installer séparément, mapping et routage MIDI sur le nouveau Mac, retour du vrai mix dans le moteur.
+- Le guide inclut la configuration de la troisième caméra (salle.toml n'a que deux blocs), les précautions USB et une répétition de 30 min avec Ableton, 3 caméras et récepteur NDI. Les mesures existantes rendent le M2 Pro 16 Go plausible, mais ne valident pas cette charge combinée.
+- Historique Git récupéré : l'archive locale correspondait à `ebfc776`, le distant est à `fa79229`. Les 4 lignes de cette mise à jour (attente de première image + diagnostic de rallonge dans le journal) ont été reprises ; aucune régression du code capteurs dans le commit audio. Métadonnées Git rétablies et branche `codex/audio-live` créée à partir de `fa79229`.
+- Aucun export audio ni modification supplémentaire du set Live pendant cette étape. Le set et les sons d'Arthur ne sont pas inclus dans Git. Le pont audio actif de l'essai est conservé.
+- Vérification avant livraison : 7 tests unitaires/OSC réussis, diagnostic complet OSC -> CoreMIDI isolé réussi (35 messages), compilation Python et contrôle des espaces du diff. Le test isolé n'a pas utilisé le port MIDI de la session Ableton active.
+
+---
+
+## 4 octobre 2026 - Pont audio Ableton pour Arthur
+
+### Ce qui a été fait
+- À la demande d'Arthur, extension du périmètre au contrôle audio : même machine pour Ableton et les capteurs, piste 3 Ambient Piano dans le set ouvert `Demo1raw [trapceleste]`.
+- `audio_live.py` reçoit les mêmes mesures OSC que le moteur, sur le port séparé 7001, et crée le port MIDI macOS `KIKINA Audio`. `config.toml` envoie maintenant les mesures aux ports 7000 et 7001 (relancer capteurs.py).
+- CC20 canal 1 : fondu du piano selon le mouvement le plus fort. CC21 canal 1 : texture selon le mouvement moyen. Seuil, lissage, expiration des données après 3 s. Les mappings dans Live déterminent les pistes ciblées.
+- Notes canal 2 : gestes avec seuil/réarmement et délai entre notes ; `/accueil/pas` déclenche les trois notes d'accueil. Palette D7 configurable, choisie d'après le libellé D dominant des clips. Note-offs programmés et arrêt propre.
+- `assets/souffle.wav` : boucle stéréo de bruit blanc filtré, 8 s / 44,1 kHz, crête -6,02 dBFS. Générateur `outils/fabriquer_souffle.py`. Prévue pour une piste optionnelle avec maximum de mapping à -24 dB.
+- `outils/simuler_interaction.py` envoie le même scénario à l'image et au son. Mode `--learn CC` pour mapper un seul contrôle à la fois. Guide `docs/audio-live.md`.
+- Environnement `.venv` créé dans cette copie et dépendances audio installées (`requirements-audio.txt`). Les dépendances vidéo/caméra ne sont pas installées dans cet environnement.
+
+### Vérifié
+- 7 tests `test_audio_live.py` passent : lissage, expiration, messages invalides, filtrage par zone, hystérésis, notes et note-offs, dédoublonnage des pas, validation, transport OSC réel.
+- Test réel OSC -> processus du pont -> port CoreMIDI isolé : 36 messages capturés, CC20/21, note de mouvement et note de pas, note-offs et remise au minimum lors de SIGTERM. Reproductible avec `.venv/bin/python outils/verifier_audio_midi.py` (macOS/Linux avec MIDI virtuel).
+- Compilation Python des nouveaux scripts ; fichier audio inspecté (2 canaux, durée et crête).
+
+### Reste à terminer
+- **Fondu piste 3 raccordé et vérifié dans Live.** Arthur a activé Piste/Téléc. et terminé le mapping CC20. Mode apprentissage arrêté, pont normal démarré. Simulation de mouvement de 20 s : déplacement du fader piste 3 observé dans Live, puis retour au minimum après le test. Le rendu sonore n'a pas été écouté par l'agent.
+- L'outil de contrôle UI lit les captures et manipule les menus natifs mais les clics sur les contrôles personnalisés de Live renvoient `AXError.notImplemented`. Arthur a donc fait le mapping et créé la piste `kikina gestures` lui-même. Routage observé : KIKINA Audio, Ch. 2, Monitor In, Master, fader -12 dB, instrument Splice présent. Simulation de 18 s avec les pas : sortie audio du piano observée au vumètre. **Arthur confirme avoir entendu les notes.** La couche de notes et le fondu sont maintenant raccordés. Reste éventuellement Souffle/CC21. Guide dans `docs/audio-live.md`.
+- Capteurs réels et retour du mix Ableton vers l'analyse du moteur non vérifiés. `entrees.simulateur` reste true ; pour le show, choisir un vrai retour audio et passer à false pour ne plus jouer test.wav.
+- Simulation et apprentissage arrêtés ; **pont normal laissé actif** (`.venv/bin/python audio_live.py`, session outil 97312). Aucun capteurs.py ni kikina.py actif au contrôle des processus. Le piano reste au minimum tant que les capteurs n'envoient pas de mouvement. Ne pas lancer un second pont.
+- Au début de cette étape, dossier téléchargé sans `.git` ; historique rétabli ensuite pour la livraison (voir entrée de transfert ci-dessus).
+
+---
+
 ## 4 octobre 2026 - Essai à deux caméras face à face (autre pièce, chez Jérémie)
 
 ### Ce qui a été fait
