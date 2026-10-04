@@ -35,6 +35,8 @@ LARGEUR = 320      # l'image est réduite à cette largeur avant mesure
 CAPTURE = (320, 240)  # demandé à la caméra : la mesure n'en voit pas plus, et deux caméras en 640 x 480 ne passent pas dans un même câble USB 2
 DELAI_FOND = 5     # secondes entre le lancement (ou la touche F) et la prise du fond (réglage `fond_delai_s`)
 NOUVELLE = threading.Event()  # une caméra vient de livrer une image
+MUETTE_S = 2       # sans image depuis ce temps : la caméra est muette, on la rouvre
+DEMARRAGE_S = 3    # délai de plus après une ouverture (une caméra dans le noir met du temps à livrer sa première image)
 
 
 def preparer(image):
@@ -202,14 +204,19 @@ def regler(identifiant, ips, figee):
 class Camera:
     """Une caméra cherchée par son nom. Débranchée, on l'attend : on n'en ouvre jamais une autre à sa place."""
 
-    def __init__(self, cherche, ips=30):
+    def __init__(self, cherche, ips=30, voulu=""):
         self.cherche, self.ips = cherche, ips
-        self.titre = cherche  # nom de la fenêtre : "camera1", "camera2"... (deux caméras peuvent porter le même nom)
+        self.voulu = voulu  # identifiant exigé (lié à la prise USB) : des caméras du même nom ne s'échangent jamais
+        self.titre = cherche  # "camera1", "camera2"... dans la fenêtre et les photos (deux caméras peuvent porter le même nom)
         self.figee = False
         self.retournee = False  # caméra fixée tête en bas : on remet l'image à l'endroit
         self.pas, self.touchees = Pas(), []
         self.tranches = {}  # zone : mouvement de chaque tranche, pour l'image de contrôle
         self.cap = self.identifiant = self.image = self.nouvelle = None
+        self.recherche = None   # le fil qui cherche et rouvre la caméra (une ouverture peut prendre plusieurs secondes)
+        self.fil = None         # le fil qui lit la caméra
+        self.vue = None         # l'image de contrôle, dans la fenêtre commune
+        self.trouvee = None     # ce qu'il a ouvert, installé ensuite par la boucle principale
         self.avant = self.fond = None
         self.fond_a = self.essai = self.recue = 0.0
         self.envoi, self.envoi_tranches = {}, {}  # dernières mesures de cette caméra, par zone
@@ -221,27 +228,44 @@ class Camera:
         self.essai = time.monotonic()
         self.cap = self.identifiant = None  # l'ancien fil relâche lui-même l'ancienne caméra (il peut être bloqué dans une lecture)
         self.envoi, self.envoi_tranches = {}, {}
-        for nom, numero, pilote, identifiant in lister_cameras():
-            if self.cherche.lower() in nom.lower() and identifiant not in prises:
+        trouvee = self.chercher(prises, premiere)
+        if trouvee:
+            self.installer(*trouvee)
+        return bool(trouvee)
+
+    def chercher(self, prises, premiere=False):
+        """Ouvre la caméra de ce nom qui n'est pas déjà prise : (capture, identifiant), ou None. Peut être long."""
+        liste = lister_cameras()
+        for nom, numero, pilote, identifiant in liste:
+            if self.cherche.lower() in nom.lower() and identifiant not in prises and self.voulu in ("", identifiant):
                 cap = cv2.VideoCapture(numero, pilote)
+                if [a[3] for a in lister_cameras()] != [a[3] for a in liste]:  # branchée ou débranchée pendant l'ouverture :
+                    cap.release()                                             # le numéro a pu désigner une autre caméra
+                    print("Caméras branchées ou débranchées pendant l'ouverture, je réessaie dans 2 s")
+                    return None
                 if not cap.isOpened() and not premiere:  # en cours de route : on ne quitte jamais, on réessaie
                     print(f"Caméra '{nom}' : impossible de la rouvrir, je réessaie dans 2 s")
-                    return False
+                    return None
                 if not cap.isOpened():
                     raise SystemExit(f"Caméra '{nom}' : impossible de l'ouvrir. macOS : Réglages Système > "
                                      "Confidentialité et sécurité > Caméra, autoriser l'application d'où ce programme "
                                      "est lancé (le Terminal), puis relancer.")
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAPTURE[0])
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAPTURE[1])
-                self.cap, self.identifiant = cap, identifiant
-                self.avant = self.fond = None
-                self.pas, self.touchees = Pas(), []
-                self.fond_a = time.monotonic() + DELAI_FOND
-                threading.Thread(target=self.lecture, args=(cap,), daemon=True).start()
                 print(f"J'ouvre : {numero} {nom}")
-                self.exposition(False)
-                return True
-        return False
+                return cap, identifiant
+        return None
+
+    def installer(self, cap, identifiant):
+        """La caméra ouverte devient la nôtre : on repart de zéro (fond, pas) et son fil commence à lire."""
+        self.cap, self.identifiant = cap, identifiant
+        self.avant = self.fond = None
+        self.pas, self.touchees = Pas(), []
+        self.essai = time.monotonic()
+        self.fond_a = self.essai + DELAI_FOND
+        self.fil = threading.Thread(target=self.lecture, args=(cap,), daemon=True)
+        self.fil.start()
+        self.exposition(False)
 
     def exposition(self, figee):
         """Automatique : la caméra cherche sa luminosité. Figée : elle n'y touche plus."""
@@ -261,26 +285,42 @@ class Camera:
 
     def lire(self, prises):
         """La petite image grise arrivée depuis la dernière fois, ou None (muette 2 s : on la recherche)."""
+        if self.trouvee is not None:  # rouverte par le fil de recherche
+            self.installer(*self.trouvee)
+            self.trouvee = None
         image, self.nouvelle = self.nouvelle, None
         if image is not None:
             self.images += 1
             self.image = cv2.rotate(image, cv2.ROTATE_180) if self.retournee else image
             return preparer(self.image)
-        if time.monotonic() - max(self.recue, self.essai) > 2:
+        if (time.monotonic() - max(self.recue, self.essai + DEMARRAGE_S) > MUETTE_S
+                and not (self.recherche and self.recherche.is_alive())):
             print(f"Caméra '{self.cherche}' muette ou débranchée, je la cherche...")
-            self.ouvrir(prises)
+            self.essai = time.monotonic()
+            self.cap = self.identifiant = None  # l'ancien fil relâche lui-même l'ancienne caméra
+            self.envoi, self.envoi_tranches = {}, {}
+            ancien = self.fil
+
+            def rouvrir():  # dans un fil à part : une ouverture qui traîne ne fige pas les autres caméras
+                if ancien is not None:  # rouvrir pendant que l'ancienne lecture tient encore la caméra : elles se coupent
+                    ancien.join(6)      # l'une l'autre. Une lecture sans image abandonne au bout de 5 s et relâche.
+                self.trouvee = self.chercher(prises)
+            self.recherche = threading.Thread(target=rouvrir, daemon=True)
+            self.recherche.start()
         return None
 
 
 def ouvrir_cameras(c):
-    noms = " | ".join(f"{numero} {nom}" for nom, numero, *_ in lister_cameras()) or "aucune"
-    print(f"Caméras branchées : {noms}")
+    noms = " | ".join(f"{numero} {nom} ({identifiant})" for nom, numero, _, identifiant in lister_cameras()) or "aucune"
+    print(f"Caméras branchées (numéro, nom, identifiant) : {noms}")
+    voulus = {k.get("identifiant", "") for k in c["camera"]} - {""}
     cameras = []
-    for k in c["camera"]:  # deux caméras du même nom : la 1re du fichier prend la 1re trouvée, etc.
-        cam = Camera(k["nom"], c["ips"])
+    for k in c["camera"]:  # deux caméras du même nom sans identifiant : la 1re du fichier prend la 1re trouvée, etc.
+        cam = Camera(k["nom"], c["ips"], k.get("identifiant", ""))
         cam.titre = f"camera{len(cameras) + 1}"  # comme les photos
-        if not cam.ouvrir({a.identifiant for a in cameras}, premiere=True):
-            raise SystemExit(f"Caméra '{k['nom']}' introuvable parmi les caméras branchées.")
+        if not cam.ouvrir({a.identifiant for a in cameras} | (voulus - {cam.voulu}), premiere=True):
+            raise SystemExit(f"Caméra {cam.titre} '{k['nom']}' {k.get('identifiant', '')} introuvable parmi les caméras "
+                             "branchées. Avec un identifiant : la caméra doit être sur la même prise USB qu'au tracé.")
         cameras.append(cam)
     return cameras
 
@@ -321,8 +361,17 @@ def dessiner(cam, gris, zones, mesures, c, bandes=(), murs=None, tranches=None):
     if cam.fond is None:
         reste = max(0, cam.fond_a - time.monotonic())
         cv2.putText(vue, f"Sortez du champ : fond dans {reste:.0f} s", (10, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-    cv2.imshow(cam.titre, vue)
     cam.vue = vue
+
+
+def montrer(cameras):
+    """Les images de contrôle de toutes les caméras côte à côte, dans une seule fenêtre (agrandissable)."""
+    vues = []
+    for cam in cameras:
+        vue = cam.vue.copy() if cam.vue is not None else np.zeros((720, 960, 3), "u1")
+        cv2.putText(vue, cam.titre, (vue.shape[1] - 230, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.4, (0, 0, 255), 3)
+        vues.append(cv2.resize(vue, (960, 720)))
+    cv2.imshow("capteurs", np.hstack(vues))
 
 
 def combiner(cameras):
@@ -355,6 +404,9 @@ def main():
     date_config = dates()
     print(f"Lieu : {LIEU.relative_to(ICI)}")
     cameras = ouvrir_cameras(c)
+    cv2.namedWindow("capteurs", cv2.WINDOW_NORMAL)  # une seule fenêtre pour toutes les caméras, agrandissable à la souris
+    cv2.resizeWindow("capteurs", 1440, 1440 * 720 // (960 * len(cameras)))
+    montre = 0.0
     clients = [SimpleUDPClient(v.rsplit(":", 1)[0], int(v.rsplit(":", 1)[1])) for v in c["osc_vers"]]
     print(f"OSC : envoi vers {', '.join(c['osc_vers'])}. Touches : F = reprendre le fond, P = photo, S = série de 10 photos, Échap = quitter.")
 
@@ -388,12 +440,12 @@ def main():
         lues = 0
         for cam, k in zip(cameras, c["camera"]):
             cam.retournee = k.get("retournee", False)
-            gris = cam.lire({a.identifiant for a in cameras if a is not cam})
+            gris = cam.lire({a.identifiant or a.voulu for a in cameras if a is not cam})  # même débranchée, une caméra liée garde sa prise
             if gris is None:
                 if cam.cap is None:  # débranchée : on le dit dans la fenêtre, l'image ne reste pas figée
                     noir = np.zeros((720, 960, 3), "u1")
                     cv2.putText(noir, "Camera debranchee, je la cherche...", (40, 360), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2)
-                    cv2.imshow(cam.titre, noir)
+                    cam.vue = noir
                     cam.envoi, cam.envoi_tranches = {}, {}
                 continue
             lues += 1
@@ -430,6 +482,9 @@ def main():
                     cam.fond += (gris - cam.fond) * min(1.0, dt / c["fond_s"])
             dessiner(cam, gris, k["zones"], mesures, c, bandes, k.get("murs"), cam.tranches)
             cam.avant = gris
+        if maintenant - montre > 1 / 15:  # la fenêtre à 15 i/s suffit ; les mesures restent à la cadence des caméras
+            montrer(cameras)
+            montre = maintenant
         envoi, tranches = combiner(cameras)
         if lues:
             for n, (p, e) in envoi.items():
@@ -534,6 +589,8 @@ def autotest():
 
     class Faux:
         def __init__(self, numero, pilote):
+            if numero == 9 and 9 in ouvertes:  # la muette se rouvre lentement
+                time.sleep(1)
             ouvertes.append(numero)
             self.numero = numero
         isOpened = lambda self: True
@@ -556,18 +613,24 @@ def autotest():
         lister_cameras = lambda: [("FaceTime HD Camera", 0, 0, "mac"), ("HD USB Camera", 1, 0, "usb2")]  # rebranchée ailleurs
         assert cam.ouvrir(set()) and ouvertes == [0, 1]
         assert not Camera("usb cam").ouvrir({"usb2"}), "deux caméras du même nom ont pris le même appareil"
+        assert Camera("usb cam", voulu="usb2").ouvrir(set()) and not Camera("usb cam", voulu="usb9").ouvrir(set()), \
+            "une caméra avec identifiant n'ouvre que la sienne"
 
         # Chaque caméra lit dans son propre fil : une caméra muette ne fige pas l'autre.
         lister_cameras = lambda: [("HD USB Camera", 9, 0, "muette"), ("HD USB Camera", 3, 0, "vivante")]
         muette, vivante = Camera("usb cam"), Camera("usb cam")
         assert muette.ouvrir(set()) and vivante.ouvrir({"muette"})
-        fin, lues = time.monotonic() + 0.5, 0
+        muette.essai = muette.recue = 0  # muette depuis longtemps : la boucle va la rouvrir (1 s d'ouverture)
+        fin, lues, avant = time.monotonic() + 0.8, 0, time.monotonic()
         while time.monotonic() < fin:
             NOUVELLE.wait(0.05)
             NOUVELLE.clear()
+            muette.lire({"vivante"})
             lues += vivante.lire({"muette"}) is not None
-            assert muette.nouvelle is None
-        assert lues >= 8, f"la caméra vivante n'a livré que {lues} images en 0,5 s"
+            assert time.monotonic() - avant < 0.2, "une caméra a figé la boucle"
+            avant = time.monotonic()
+        assert lues >= 15, f"la caméra vivante n'a livré que {lues} images en 0,8 s"
+        assert muette.recherche.is_alive(), "la muette devrait être en train de se rouvrir"
         muette.cap = vivante.cap = None
     finally:
         cv2.VideoCapture, lister_cameras = vrais

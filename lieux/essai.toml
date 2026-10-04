@@ -1,6 +1,8 @@
 # Les caméras de ce lieu. Écrit par outils/tracer.py : refaire le tracé plutôt que modifier à la main.
 # Coordonnées de 0 à 1 dans l'image de la caméra (0, 0 = en haut à gauche).
 # nom : une partie du nom de la caméra (deux caméras du même nom : la 1re du fichier prend la 1re branchée).
+# identifiant : lié à la prise USB (capteurs.py l'affiche au lancement). Avec lui, des caméras du même nom ne s'échangent
+#   jamais ; sans lui, elles se répartissent dans l'ordre des prises. Changer de prise : le recopier.
 # retournee : true si la caméra est fixée tête en bas.
 # zones : le sol devant chaque mur (1 Accueil, 2 Densité, 3 Mouvement, 4 Proximité),
 #   polygone [[x, y], ...] ou rectangle [gauche, haut, droite, bas]. Une même zone vue par 2 caméras : la plus forte mesure.
@@ -9,6 +11,7 @@
 
 [[camera]]
 nom = "HD USB Camera"
+identifiant = "0x111000032e49230"
 retournee = true
 note = "Autre pièce, essai du 4 octobre : une caméra au centre du petit mur, posée sur le mur 3. Côtés : 1 à gauche, 2 à droite (zones tracées par Jérémie, lignes posées par Claude). Mur du fond (4) : pour la 2e caméra."
 zones = { 1 = [[0.446, 0.303], [0.442, 0.465], [0.24, 0.993], [0.014, 0.982], [0.004, 0.057], [0.445, 0.296]], 2 = [[0.575, 0.3], [0.569, 0.463], [0.746, 0.989], [0.984, 0.982], [0.988, 0.082], [0.575, 0.297]], 3 = [[0.319, 0.787], [0.678, 0.787], [0.746, 0.99], [0.24, 0.99]] }
@@ -16,7 +19,14 @@ murs = { 1 = [[0.24, 0.993], [0.425, 0.51], [0.442, 0.465]], 2 = [[0.569, 0.463]
 
 [[camera]]
 nom = "HD USB Camera"
+identifiant = "0x113110032e49230"
 retournee = true
 note = "Essai du 4 octobre, caméra 2 posée sur le mur 4, face à la caméra 1 : côtés 1 à droite, 2 à gauche (zones tracées par Jérémie, lignes posées par Claude), sol au pied de la caméra (4) comme la zone 3 de la caméra 1."
 zones = { 1 = [[0.535, 0.315], [0.874, 0.986], [0.984, 0.983], [0.989, 0.135], [0.77, 0.064], [0.535, 0.151], [0.535, 0.31]], 2 = [[0.428, 0.151], [0.428, 0.321], [0.384, 0.519], [0.353, 0.986], [0.023, 0.988], [0.009, 0.06], [0.428, 0.15]], 4 = [[0.366, 0.787], [0.773, 0.787], [0.874, 0.986], [0.353, 0.986]] }
 murs = { 1 = [[0.535, 0.315], [0.566, 0.377], [0.874, 0.986]], 2 = [[0.353, 0.986], [0.416, 0.377], [0.428, 0.321]], 4 = [[0.874, 0.99], [0.613, 0.99], [0.353, 0.99]] }
+
+[[camera]]
+nom = "HD USB Camera"
+retournee = false
+note = "Essai du 4 octobre, caméra 3 : au-dessus de la porte, regarde vers le bas. Seulement les bandes des 3 pas (et plus tard le comptage)."
+zones = {  }

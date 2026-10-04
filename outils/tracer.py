@@ -27,7 +27,7 @@ import numpy as np
 ICI = Path(__file__).resolve().parent.parent
 ATELIERS = {"1": "Accueil", "2": "Densité", "3": "Mouvement", "4": "Proximité"}
 LARGEUR = 960  # largeur de la fenêtre
-CLES = ("nom", "retournee", "note", "zones", "murs", "pas")
+CLES = ("nom", "identifiant", "retournee", "note", "zones", "murs", "pas")
 
 
 def toml(v):
@@ -48,6 +48,8 @@ def ecrire(chemin, cameras):
         "# Les caméras de ce lieu. Écrit par outils/tracer.py : refaire le tracé plutôt que modifier à la main.",
         "# Coordonnées de 0 à 1 dans l'image de la caméra (0, 0 = en haut à gauche).",
         "# nom : une partie du nom de la caméra (deux caméras du même nom : la 1re du fichier prend la 1re branchée).",
+        "# identifiant : lié à la prise USB (capteurs.py l'affiche au lancement). Avec lui, des caméras du même nom ne s'échangent",
+        "#   jamais ; sans lui, elles se répartissent dans l'ordre des prises. Changer de prise : le recopier.",
         "# retournee : true si la caméra est fixée tête en bas.",
         "# zones : le sol devant chaque mur (1 Accueil, 2 Densité, 3 Mouvement, 4 Proximité),",
         "#   polygone [[x, y], ...] ou rectangle [gauche, haut, droite, bas]. Une même zone vue par 2 caméras : la plus forte mesure.",
