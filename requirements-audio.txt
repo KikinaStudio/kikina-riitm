@@ -1,0 +1,3 @@
+# Pont seul : aucune dépendance vidéo, caméra ou NDI requise.
+python-osc==1.10.2
+python-rtmidi==1.5.8

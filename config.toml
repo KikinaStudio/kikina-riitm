@@ -130,7 +130,7 @@ condensation = 0.25        # vitesse de cette aspiration
 # Les capteurs (étape 4) : le programme capteurs.py, séparé du moteur. Se recharge à chaud,
 # sauf la liste des caméras (relancer capteurs.py).
 [capteurs]
-osc_vers = ["127.0.0.1:7000"]  # où envoyer les chiffres : kikina.py (127.0.0.1 = cette machine), plus la machine d'Arthur, ex. "192.168.1.20:9000". Relancer après un changement.
+osc_vers = ["127.0.0.1:7000", "127.0.0.1:7001"]  # image + audio_live.py. Autre Mac : remplacer la 2e IP. Relancer capteurs.py après changement.
 seuil = 10                 # écart de gris (0 à 255) pour qu'un point compte ; monter si l'image vide fourmille de bleu
 presence_pleine = 0.10     # part de la zone qui diffère du fond (salle vide) pour une présence de 1
 energie_pleine = 0.03      # part de la zone qui change d'une image à l'autre pour un mouvement de 1
@@ -144,3 +144,47 @@ tranches = 8               # une zone dont le mur est tracé est découpée en 8
 
 # Les caméras et leurs zones sont dans un fichier par lieu, tracé à la souris sur une photo (outils/tracer.py) :
 # lieux/salle.toml pour le show (par défaut), lieux/maison.toml pour les essais (python capteurs.py maison).
+
+# Pont vers Ableton. Relancer audio_live.py après modification.
+[audio_live]
+osc_hote = "127.0.0.1"     # "0.0.0.0" pour recevoir les caméras d'une autre machine
+osc_port = 7001            # distinct du port 7000 de kikina.py
+midi_port = "KIKINA Audio"
+midi_virtuel = true        # macOS/Linux ; Windows : false + port loopMIDI nommé ci-dessus
+canal = 1                 # canal MIDI, pas le numéro de piste Ableton
+cadence = 30
+expiration_s = 3.0         # plus de capteur : retour progressif au minimum
+montee_s = 0.5             # temps pour parcourir 95 % du chemin
+retombee_s = 2.5
+
+[[audio_live.controles]]
+nom = "Ambient Piano - mouvement"
+cc = 20                   # à mapper au volume de la piste 3 dans Live
+mesure = "energie"        # "presence" possible pour une couche liée à l'occupation
+zones = [1, 2, 3, 4]       # [3] pour seulement le mur Mouvement ; aucun lien avec piste 3
+agregation = "max"         # max : le mur le plus actif ; moyenne : ensemble de la salle
+seuil = 0.03               # petit mouvement parasite ignoré
+minimum = 0
+maximum = 127              # limiter le gain maximum dans le mapping Ableton (0 dB)
+
+[[audio_live.controles]]
+nom = "Souffle - mouvement"
+cc = 21                   # optionnel : volume d'une piste de bruit, maximum -24 dB dans Live
+mesure = "energie"
+zones = [1, 2, 3, 4]
+agregation = "moyenne"
+seuil = 0.08
+minimum = 0
+maximum = 127
+
+[audio_live.notes]
+actif = true
+canal = 2                 # une piste piano séparée : entrée KIKINA Audio, canal 2, Monitor In
+notes_zones = [62, 66, 69, 72] # D, F#, A, C : palette D7 du projet actuel
+notes_pas = [62, 66, 69]   # /accueil/pas 1, 2, 3
+seuil = 0.25              # mouvement nécessaire pour déclencher
+rearmement = 0.12         # redescendre ici avant de déclencher à nouveau
+intervalle_s = 1.2        # limite globale des notes de mouvement
+duree_s = 0.7
+velocite_min = 40
+velocite_max = 85
