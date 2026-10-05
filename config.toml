@@ -73,9 +73,9 @@ voile_filaments = 0.25
 # ---------------------------------------------------------------------------
 # Les entrées (étape 3). Changer ce bloc demande de relancer le programme.
 [entrees]
-simulateur = true          # true : le son vient de son_test ; false : de l'entrée audio ci-dessous
+simulateur = false         # true : le son vient de son_test ; false : de l'entrée audio ci-dessous
 son_test = "assets/test.wav"
-audio_entree = ""          # une partie du nom de l'entrée audio en mode réel (vide = entrée par défaut)
+audio_entree = "BlackHole" # une partie du nom de l'entrée audio en mode réel (vide = entrée par défaut)
 osc_port = 7000            # à confirmer avec Arthur
 
 # La musique. Se recharge à chaud. Durées = temps pour faire 95 % du chemin.
@@ -105,26 +105,26 @@ pas_x = [2450, 2700, 2950] # atelier Accueil : où naît l'anneau de chaque pas 
 pas_y = 0.8                # hauteur de ces anneaux (0 = haut du mur, 1 = bas)
 
 # ---------------------------------------------------------------------------
-# Les titres des ateliers et les cards (étape 5). Se recharge à chaud.
-# Chaque mur a son dossier assets/cards/murN/ : titre.png (toujours affiché) et ses cards (les autres PNG).
-# Une card est une colonne sombre qui coupe le mur sur presque toute sa hauteur, son texte en haut.
+# Les panneaux des murs et les cartes use case (voir cartes.py). Se recharge à chaud.
+# Panneau : assets/cards/murN/panneau.png, toujours affiché, une colonne sombre qui coupe le mur.
+# Use case : assets/cards/T_nom/murN_XX.png, lancé par la touche T.
 [cartes]
-apparition_s = 4           # la matière se condense pour former la card
-affichage_s = 18           # la card est lisible (vie totale : 4 + 18 + 4 = 26 s)
-dissolution_s = 4          # elle se dissout
-pause_s = 8                # matière seule entre deux cards d'un même mur
-attente_s = 2              # délai entre l'arrivée d'un groupe dans la zone et sa première card
-presence_seuil = 0.5       # présence (0 à 1) à partir de laquelle un groupe est "là"
-titre_lumiere = 0.7        # luminosité du titre de l'atelier (1 = comme les cards)
-haut_px = 40               # distance entre le haut du mur et le titre de l'atelier
+apparition_s = 4           # la matière se condense pour former un panneau (au démarrage)
 ecart_px = 40              # la colonne s'arrête à 40 px du haut et du bas du mur (elle ne le coupe pas en entier)
-interieur_px = 64          # marge entre le bord de la colonne et son texte (2 fois le corps du texte)
-marge_px = 60              # marge autour du texte : bords du mur, portes, titre
+interieur_px = 64          # marge entre le bord de la colonne et son texte (comme les cartes : 2 fois le corps)
+marge_px = 60              # marge autour d'un panneau : bords du mur, portes
 creux = 1.0                # part des grains éteints dans la colonne (1 = coupure nette)
 creux_bord_px = 15         # le bord de la coupure, en fondu
 fond = 0.07               # lumière du panneau de la colonne (0 = simple coupure noire)
-portee_px = 150            # distance d'où la matière est aspirée dans la colonne (puis y revient)
+portee_px = 150            # distance d'où la matière est aspirée dans la colonne
 condensation = 0.25        # vitesse de cette aspiration
+# Cartes use case (touches 1 à 4, 0 pour les effacer) : noir sur blanc, du panneau de leur mur au panneau suivant
+carte_vitesse_px_s = 80    # vitesse des cartes (80 px/s = environ 24 cm/s)
+carte_blanc = 0.85         # lumière du fond blanc des cartes
+carte_ecart_px = 240       # écart entre deux cartes qui sortent du même panneau
+arrondi_px = 16            # rayon des coins des panneaux et des cartes
+carte_grain = 0.25         # grain gardé sur les panneaux et les cartes (1 = autant que la matière, 0 = lisse)
+fondu_s = 2                # touche 0 ou autre use case : les cartes en route s'effacent en 2 s
 
 # ---------------------------------------------------------------------------
 # Les capteurs (étape 4) : le programme capteurs.py, séparé du moteur. Se recharge à chaud,
@@ -177,13 +177,37 @@ seuil = 0.08
 minimum = 0
 maximum = 127
 
+[[audio_live.controles]]
+nom = "EFX - présence près des murs"
+cc = 22                   # volume de la piste 4 EFX dans Live : Min -inf dB, Max sous la musique (-12 dB pour commencer)
+mesure = "presence"
+zones = [1, 2, 3, 4]
+agregation = "max"         # quelqu'un près de n'importe quel mur
+seuil = 0.15               # ignore le petit bruit de présence d'une salle vide
+montee_s = 2.0             # elle arrive doucement (sinon : montee_s de [audio_live])
+retombee_s = 4.0
+minimum = 0
+maximum = 127
+
+[[audio_live.controles]]
+nom = "Piste 1 - mouvement"
+cc = 23                   # volume de la piste 1 dans Live : Min = son niveau au repos (-18 dB pour commencer), Max 0 dB
+mesure = "energie"
+zones = [1, 2, 3, 4]
+agregation = "max"         # le mur le plus actif : là où est le groupe
+seuil = 0.03
+minimum = 0
+maximum = 127
+
 [audio_live.notes]
 actif = true
 canal = 2                 # une piste piano séparée : entrée KIKINA Audio, canal 2, Monitor In
+ecoute = "KIKINA Piste 1"   # fugue : port où Ableton renvoie les notes de la piste 1, rejouées une par geste ; "" = notes_zones
+retard = 16                # la note rejouée est tirée au hasard parmi les 16 dernières de la piste 1
 notes_zones = [62, 66, 69, 72] # D, F#, A, C : palette D7 du projet actuel
 notes_pas = [62, 66, 69]   # /accueil/pas 1, 2, 3
-seuil = 0.25              # mouvement nécessaire pour déclencher
-rearmement = 0.12         # redescendre ici avant de déclencher à nouveau
+seuil = 0.5               # mouvement fort nécessaire pour déclencher
+rearmement = 0.2          # redescendre ici avant de déclencher à nouveau
 intervalle_s = 1.2        # limite globale des notes de mouvement
 duree_s = 0.7
 velocite_min = 40

@@ -4,6 +4,66 @@
 
 ---
 
+## 5 octobre 2026 (soir) - Cartes de panneau à panneau, son de l'approche et du mouvement
+
+### Ce qui a été fait
+- Cartes image supprimées (demande de Jérémie) : seules restent les cartes texte, `murN_XX.png`. Champs « image » retirés de `cards.json`.
+- Une carte du mur N sort de sous le panneau N, glisse vers la droite et disparaît sous le panneau suivant (N + 1 ; après le 4, le 1), au lieu du tour complet. Vitesse `carte_vitesse_px_s = 80` (environ 24 cm/s). Les cartes d'un même panneau sortent l'une après l'autre avec 240 px d'écart. Un use case dure 1 à 1,5 min.
+- Pont Ableton (`audio_live.py`) : chaque commande peut avoir sa propre montée et retombée (`montee_s`, `retombee_s`). CC22 (piste 4 EFX, présence près des murs) monte en 2 s et retombe en 4 s. Nouveau CC23 : volume de la piste 1 selon le mouvement le plus fort. Mappings Live à faire (guide `docs/audio-live.md`, section 4) : CC22 sur le volume de la piste 4, Min -inf, Max -12 dB ; CC23 sur le volume de la piste 1, Min -18 dB, Max 0 dB. CC20 (piste 3) suit toujours le mouvement.
+- Côté image, rien à coder : la présence agite déjà doucement la matière à l'endroit de la personne (`presence_force`), le mouvement l'agite fort et fait naître les anneaux des notes là où ça bouge. Il faut que le moteur entende la musique (Ableton vers BlackHole).
+- Son en NDI : le plugin NDI Audio Direct (dans Ableton) n'existe que sous Windows. Sur le Mac : NDI Scan Converter (installé), avec l'entrée son du Mac sur BlackHole, ou le son ajouté au flux KIKINA (à coder). À décider avec le technicien de la salle. Câble vers la console en secours.
+
+### Vérifié
+- Autotest `cartes.py` : chaque carte part cachée sous son panneau et arrive cachée sous le suivant, aucun chevauchement. Moteur 45 s avec Santé : trajets corrects, cartes coupées net derrière les portes.
+- 9 tests `test_audio_live` OK (nouveau : l'EFX monte doucement, la piste 1 suit le mouvement). Pont à vide (`--dry-run`) avec de fausses mesures : CC22 monte en 2 s, CC23 suit le mouvement comme CC20.
+
+### Reste
+- Demain dans la salle : caméras et lumière, photos, tracé des zones (des bandes de sol le long des murs : y entrer = s'approcher du mur), illuminateurs et filtres IR, nouveau fond (touche F), mappings CC22 et CC23 dans Live, réglage de `presence_force` en marchant le long des murs.
+- Les derniers essais du moteur affichent « son -120 dB » : il n'entend pas Ableton (rien n'arrive sur BlackHole).
+
+### Comment relancer
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/python audio_live.py             # onglet 1 (un seul pont à la fois)
+.venv/bin/python kikina.py                 # onglet 2 (touches 1 à 4 : use cases, 0 : effacer)
+.venv/bin/python capteurs.py salle         # onglet 3
+```
+
+---
+
+## 5 octobre 2026 - Panneaux fixes et cartes use case (Notion de Bianca)
+
+### Ce qui a été fait
+- Source : Notion « RIITM · Sound, alive : panneaux et use cases ». Sources des cartes ignorées (cadre à part plus tard), images remplacées par un cadre gris qui décrit l'image prévue.
+- 4 panneaux toujours affichés, panneau N sur le mur N : 1 Storytelling, 2 Neurosciences, 3 Espace, 4 Technologie. Colonne sombre comme avant, au milieu de la place libre du mur. Corps 28 px, titre 56 px (en 32 px le texte du Notion ne tenait pas dans la hauteur).
+- Les titres d'ateliers (Accueil, Densité...) et les anciennes cards par présence sont retirés (plus de place sur le mur 4 avec un panneau). Écart avec CLAUDE.md section 8, à confirmer par Jérémie.
+- Touches 1 Santé, 2 Wellness, 3 Retail, 4 Hôtel : les cartes du use case (noir sur blanc) sortent une à une de sous le panneau de leur thème, font un tour complet de la salle en 3 min (passent sous les autres panneaux et derrière les portes), rentrent sous leur panneau et disparaissent. Elles ne se chevauchent jamais. Touche 0 : effacement en 2 s. Un autre chiffre pendant un tour : effacement puis lancement du nouveau.
+- Demande de Jérémie (même jour) : texte et image séparés. Chaque carte du Notion donne une carte texte (`murN_01a.png`, titre 60 px, texte 36 px) et une carte image (`murN_01b.png`, cadre gris provisoire). Largeurs et hauteurs tirées au hasard (les mêmes à chaque fabrication), hauteur sur le mur tirée au hasard à chaque lancement. Un PNG Figma de n'importe quelle taille remplace le fichier.
+- Textes dans `assets/cards/cards.json`, puis `.venv/bin/python outils/fabriquer_cards.py`. Un PNG Figma de même taille remplace le fichier.
+- Réglages dans `config.toml`, section `[cartes]` : `tour_s` (vitesse), `carte_blanc`, `carte_ecart_px`, `fondu_s`.
+- Retours de Jérémie (même jour) : mentions « 1 · Storytelling » retirées ; titres plus proches du texte (panneau 46 / 32 px, carte 48 / 36 px) ; polices plus grasses (titres Bold, textes Medium) ; plus de marge dans les cartes (72 px) et entre elles (240 px) ; coins arrondis (`arrondi_px`) ; moins de grain sur panneaux et cartes (`carte_grain`).
+- Police Whyte Inktrap (fournie par Jérémie, copiée dans `assets/polices/` : Bold pour les titres, Regular pour les textes, Medium Italic pour les chapeaux). Titres à 1,2 fois le texte : panneau 38 / 32 px, carte 42 / 36 px. « : ; ? ! » restent attachés au mot précédent. Le haut des titres de panneau était coupé (la police dépasse au-dessus de son point de départ) : corrigé ; le texte est maintenant centré en hauteur dans la colonne.
+- Même typographie sur les panneaux (noirs) et les cartes (blanches) : titre 42 px, corps 34 px, chapeau 34 px italique, tout sur une grille de 48 px, demi-ligne (24 px) entre titre, chapeau et texte. Marge intérieure de 64 px (2 fois le corps), mesurée au ras du texte, pour les cartes comme pour les panneaux (`interieur_px`). Lignes équilibrées (même nombre de lignes, longueurs proches : plus de mot seul en fin de bloc), nombres attachés à leur unité (« 10 ans », « 8 h »). Panneaux 1 à 3 jusqu'à 1250 px de texte, panneau 4 à 930 px (36 px de corps ne tient pas sur le mur 4).
+
+### Ce qui marche
+- Autotest `python cartes.py` OK : panneaux dans leur mur et hors portes, aucun chevauchement sur les 4 use cases. Durée d'un use case (texte + image) : Santé 7 min, Wellness 6, Retail 4,9, Hôtel 4. Pour raccourcir : baisser `tour_s`.
+- Moteur lancé avec Santé : 30 i/s tenu. Le coût des cartes ne se voit pas dans les chiffres.
+
+### Ce qui reste fragile
+- Mode économie d'énergie du Mac trouvé ACTIF à 18 h 30 (batterie 60 %) : 27 ms de rendu sans cartes, 28 ms avec. Les cartes coûtent environ 1 ms.
+- Mac sur batterie pendant les tests : le rendu en dense a varié de 18 à 30 ms d'un essai à l'autre, avec ou sans cartes. Secteur obligatoire.
+- Jugé sur captures uniquement, pas encore en mouvement dans NDI Video Monitor ni sur les murs. Le grain rend le blanc des cartes texturé.
+- Une carte plus haute que 680 px ou plus large que son panneau (environ 1100 px) est coupée.
+
+### Comment relancer
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/python kikina.py
+```
+Touches 1 à 4 dans la fenêtre d'aperçu, 0 pour effacer. Test sans clavier : `--usecase 1`.
+
+---
+
 ## 4 octobre 2026 - Transfert du show vers un autre M2 Pro 16 Go
 
 - Précision d'Arthur : **un seul Mac de remplacement** fera tourner les 3 webcams, Ableton et tout Kikina/NDI. Ce n'est pas un montage à deux machines. Adresses OSC conservées en localhost.

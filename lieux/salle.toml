@@ -1,6 +1,8 @@
 # Les caméras de ce lieu. Écrit par outils/tracer.py : refaire le tracé plutôt que modifier à la main.
 # Coordonnées de 0 à 1 dans l'image de la caméra (0, 0 = en haut à gauche).
 # nom : une partie du nom de la caméra (deux caméras du même nom : la 1re du fichier prend la 1re branchée).
+# identifiant : lié à la prise USB (capteurs.py l'affiche au lancement). Avec lui, des caméras du même nom ne s'échangent
+#   jamais ; sans lui, elles se répartissent dans l'ordre des prises. Changer de prise : le recopier.
 # retournee : true si la caméra est fixée tête en bas.
 # zones : le sol devant chaque mur (1 Accueil, 2 Densité, 3 Mouvement, 4 Proximité),
 #   polygone [[x, y], ...] ou rectangle [gauche, haut, droite, bas]. Une même zone vue par 2 caméras : la plus forte mesure.
@@ -9,12 +11,15 @@
 
 [[camera]]
 nom = "HD USB Camera"
-retournee = false
-note = "Salle, 1er octobre (photo captures/camera1_125610.jpg) : au centre du mur Densité, regarde vers Proximité. Zones tracées par Jérémie. Densité (2) déduite : le sol au pied de la caméra, profondeur 0.7 à ajuster. Bandes des pas à replacer."
-zones = { 1 = [[0.58, 0.26], [1, 0.43], [1, 1], [0.9, 1], [0.6, 0.44]], 3 = [[0, 0.34], [0.39, 0.26], [0.39, 0.36], [0.36, 0.49], [0.14, 1], [0, 1]], 4 = [0.39, 0.26, 0.58, 0.38], 2 = [[0.14, 1], [0.27, 0.7], [0.74, 0.7], [0.9, 1]] }
+identifiant = "0x111000032e49230"
+retournee = true
+note = "Salle, 5 octobre (photo captures/camera1_093001.jpg). Zones à retracer."
+zones = {  }
 
 [[camera]]
 nom = "HD USB Camera"
+identifiant = "0x113110032e49230"
 retournee = false
-note = "Salle, 1er octobre (photo captures/camera2_125610.jpg) : au centre du mur Mouvement, regarde la porte d'entrée. La table de matériel reste hors zone."
-zones = { 1 = [[0.43, 0.4], [0.75, 0], [1, 0], [1, 0.09], [0.48, 0.53]], 3 = [[0, 0.77], [0.18, 0.77], [0.32, 1], [0, 1]], 4 = [[0.18, 0.77], [0.42, 0.4], [0.47, 0.53], [0.32, 0.97]] }
+note = "Salle, 5 octobre (photo captures/camera2_093001.jpg). Zones à retracer."
+zones = { 1 = [[0.391, 0.228], [0.308, 0.383], [0.203, 0.572], [0.126, 0.781], [0.075, 0.958], [0.006, 0.947], [0.007, 0.053], [0.38, 0.075], [0.393, 0.228]], 3 = [[0.566, 0.103], [0.562, 0.207], [0.707, 0.453], [0.804, 0.739], [0.851, 0.958], [0.982, 0.971], [0.982, 0.064], [0.57, 0.099]] }
+murs = { 1 = [[0.569, 0.107], [0.559, 0.199], [0.697, 0.439]], 3 = [[0.084, 0.946], [0.49, 0.985]] }

@@ -78,6 +78,18 @@ to CC21, **Min = -inf dB, Max = -24 dB**. Exit mapping, stop learn mode, and res
 `audio_live.py`. CC21 follows average movement, so a single person produces a
 small texture and a moving group produces more. Tune the maximum by listening.
 
+## 4. EFX near the walls (CC22) and track 1 with movement (CC23)
+
+- **CC22, track 4 EFX:** follows presence near any wall (the floor zones drawn along the walls).
+  It fades in over about 2 s and out over about 4 s. Map it with `--learn 22` to **track 4's volume**,
+  then set **Min = -inf dB, Max = -12 dB** in the Mapping Browser. Raise or lower Max by ear:
+  audible when someone approaches, never above the music.
+- **CC23, track 1:** follows the strongest movement, like CC20. Map it with `--learn 23` to
+  **track 1's volume**, **Min = -18 dB** (its level when nobody moves), **Max = 0 dB**.
+- CC20 (track 3 piano) still follows movement. Remove its mapping in Live if it should not.
+
+The Live mapping range sets the loudness; the bridge only sends how near or how active people are.
+
 ## Test without webcams
 
 Stop `capteurs.py` during this test. Keep Ableton and the bridge running:

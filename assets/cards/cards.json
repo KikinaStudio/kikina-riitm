@@ -1,36 +1,86 @@
 {
-  "_lisez_moi": "Textes PROVISOIRES des titres d'ateliers et des cards (colonnes verticales), tirés du Notion « RIITM - Expérience immersive Kikina @ Festival CNN » (zones 1 à 4, une par mur). Par mur : l'invitation, ce que la salle perçoit, le cas d'usage. Après modification : .venv/bin/python outils/fabriquer_cards.py. Environ 40 mots par texte, 50 au plus ; titres courts (2 lignes).",
-  "murs": [
+  "_lisez_moi": "Textes tirés du Notion « RIITM · Sound, alive : panneaux et use cases » (Bianca). Les 4 panneaux restent affichés en permanence, panneau N sur le mur N. Les use cases sont lancés au clavier (touche 1 à 4) : leurs cartes (noir sur blanc) sortent de sous le panneau de leur thème (mur N) et glissent jusqu'au panneau suivant, sous lequel elles disparaissent. Après modification : .venv/bin/python outils/fabriquer_cards.py",
+  "panneaux": [
     {
-      "atelier": "Accueil",
-      "cards": [
-        {"famille": "invitation", "titre": "Vos trois premiers pas", "texte": "Avancez un par un et écoutez. Vos trois premiers pas font naître trois notes, qui ne sonnent que pour vous. La musique ne vous attendait pas : elle vous accueille, au rythme de votre marche."},
-        {"famille": "perception", "titre": "Vous êtes entrés", "texte": "Dès que vous franchissez le seuil, la salle suit votre silhouette. Seul compte le rythme de vos pas : il passe à la musique, qui répond aussitôt, note après note."},
-        {"famille": "cas d’usage", "titre": "En boutique", "texte": "Franchir la porte d’une boutique, c’est entendre sa première phrase. Une signature sonore de bienvenue, différente pour chaque personne qui entre, à la place d’une playlist qui ne sait pas que vous êtes là."}
+      "theme": "1 · Storytelling",
+      "titre": "Au cinéma, la musique accompagne l'histoire",
+      "chapeau": "Revoir une scène de film avec une musique différente c'est voir une nouvelle scène",
+      "texte": "La musique accompagne chaque décision, amplifie les gestes et oriente inconsciemment notre ressenti. Dans la vie réelle, elle guide nos perceptions et nos choix. Mais là où le compositeur de film connaît la scène suivante, dans un lieu, personne ne la connaît.\nOn a tous appris à écouter avant de parler, la musique doit faire de même."
+    },
+    {
+      "theme": "2 · Neurosciences",
+      "titre": "80% de la recherche sur le son et le cerveau a moins de 10 ans",
+      "chapeau": "Comme toutes les sciences incomprises, la musique a toujours relevé de la magie.",
+      "texte": "Tempo, rythme, pulsation, modes, harmonie, consonance, dissonance, tonalité, hauteur, registre, timbre, texture, densité, intensité, dynamique, attaque, résonance, réverbération, spatialisation, répétition, variation, durée des phrases, silences. Chacun de ces paramètres agit sur notre état. Les neurosciences nous disent comment les régler, pour chaque lieu, à chaque instant."
+    },
+    {
+      "theme": "3 · Espace",
+      "titre": "Plus d'un million de données collectées en 20 min de visite d'un lieu",
+      "chapeau": "Caméras, capteurs de présence, compteurs d'entrée, données d'horaires et de météo, nos bâtiments mesurent en continu ce qui s'y passe.",
+      "texte": "La collecte de données explose dans les lieux physiques. Elle sert aujourd'hui la sécurité, l'analyse des comportements et la logistique. Kikina propose pour la première fois de s'en servir en direct, au service du lieu et de son visiteur : rythme et déplacements deviennent des signaux qui font évoluer la musique à chaque instant, sans identifier personne."
+    },
+    {
+      "theme": "4 · Technologie",
+      "largeur": 930,
+      "titre": "Une musique qui se recompose en temps réel",
+      "chapeau": "Faire passer la musique de décor à outil, au service du lieu et du bien-être du visiteur.",
+      "texte": "Le compositeur écrit la matière musicale et les règles qui la font évoluer. Notre moteur adaptatif reçoit en continu les données du lieu et réagence la musique à chaque instant, selon ces règles et des principes issus des neurosciences. Elle ne se répète jamais. Pour les compositeurs, c'est un nouveau débouché : une œuvre qui vit dans un lieu."
+    }
+  ],
+  "use_cases": [
+    {
+      "touche": 1,
+      "nom": "Santé",
+      "cartes": [
+        {"mur": 1, "titre": "Le bien-être du patient fait partie de son traitement.", "texte": "L'anxiété, la perception du temps d'attente, la douleur, le réveil : tout ce que le patient ressent pèse sur la façon dont il vit son soin. Le son influe sur chacun d'eux et sur le résultat du soin."},
+        {"mur": 1, "titre": "Un espace de récupération pour soignants et patients.", "texte": "Alarmes, bips, couloirs : un environnement subi par tous. Un son qui aide à décrocher, au bloc, en salle de repos, en salle d'attente ou en chambre, fait partie de la qualité du soin."},
+        {"mur": 2, "titre": "Douleur et antalgiques, un exemple parmi d'autres.", "texte": "Il est prouvé que la musique réduit la douleur, l'anxiété et la consommation d'antalgiques après une opération, même sous anesthésie générale."},
+        {"mur": 2, "titre": "Les résultats à Ambroise Paré.", "texte": "13 patients sur 14 ont vécu un réveil confortable, 12 sur 14 une anxiété réduite. 12 soignants sur 13 estiment que les patients ont mieux vécu le pré-opératoire et le réveil."},
+        {"mur": 3, "titre": "Un son dirigé pour chaque public.", "texte": "Dans une même salle d'hôpital se croisent patients, proches et soignants, avec des besoins opposés : s'apaiser d'un côté, rester concentré et alerte de l'autre. Diriger le son devient essentiel."},
+        {"mur": 3, "titre": "Un objectif différent pour chaque espace.", "texte": "Bloc opératoire, salle de réveil, salle d'attente, salle de repos : chaque espace a un objectif neurophysiologique totalement différent et son environnement sonore contribue au résultat du soin."},
+        {"mur": 4, "titre": "Une musique composée par le lieu et par le corps.", "texte": "La salle et chaque patient l'écrivent avec le compositeur, en direct."},
+        {"mur": 4, "titre": "Quand la salle se remplit, la musique s'apaise.", "texte": "Plus l'attente est dense, plus la tension monte, la musique s'aère pour la contenir."},
+        {"mur": 4, "titre": "Une musique qui sait se taire.", "texte": "Quand l'urgence arrive, elle se retire et laisse toute la place à l'équipe."},
+        {"mur": 4, "titre": "Un réveil en douceur.", "texte": "Rythme cardiaque, respiration, tension, mouvements : la musique suit les signaux du corps du patient et l'accompagne, palier après palier, vers la conscience."}
       ]
     },
     {
-      "atelier": "Densité",
-      "cards": [
-        {"famille": "invitation", "titre": "Entrez dans le carré", "texte": "Entrez un par un, puis tous ensemble. Chaque personne ajoute une couche à la musique. Seul, vous entendez une ligne ; à dix, un paysage entier. Le groupe compose sans le savoir."},
-        {"famille": "perception", "titre": "Combien sommes-nous ?", "texte": "La salle compte les présences dans la zone, sans chercher à savoir qui vous êtes. Plus le groupe se rassemble, plus la musique s’épaissit, sans jamais couper."},
-        {"famille": "cas d’usage", "titre": "Suivre l’affluence", "texte": "Dans un hôtel ou une boutique, la même œuvre s’allège aux heures creuses et s’étoffe quand le lieu se remplit. L’ambiance suit la vie du lieu au lieu de l’ignorer."}
+      "touche": 2,
+      "nom": "Wellness",
+      "cartes": [
+        {"mur": 1, "titre": "La musique induit l'état recherché.", "texte": "Le bien-être vise des états neurophysiologiques précis, c'est exactement ce que fait la musique. Composée pour chaque étape du protocole, elle amène le corps vers l'état visé, puis en prolonge l'effet après le soin."},
+        {"mur": 1, "titre": "Les praticiens, premiers exposés.", "texte": "Ils passent leurs journées dans un même espace, exposés en continu à leur environnement musical. Une composition qui se renouvelle sans se répéter et s'adapte à la fréquentation du lieu limite la fatigue auditive."},
+        {"mur": 2, "titre": "Le bien-être passe par le système nerveux.", "texte": "Se détendre, récupérer, lâcher prise, en wellness, on cherche à l'apaiser. La musique y accède directement, ralentit la respiration et le cœur, apaise le stress et active les circuits du plaisir."},
+        {"mur": 2, "titre": "La recherche au cœur de l'écriture.", "texte": "Nous traduisons les connaissances sur la détente et le sommeil en règles d'écriture : tempo, densité, registre, transitions... Chaque composition s'appuie sur un panel de paramètres à son service."},
+        {"mur": 3, "titre": "Le spa, une source de données.", "texte": "Flux, occupation, temps passés, horaires : le spa mesure déjà ce qui s'y passe. La musique s'en nourrit en direct pour accompagner chaque client vers le soin, sans identifier personne."},
+        {"mur": 3, "titre": "Le corps, une autre source de données.", "texte": "Objets connectés et capteurs portés mesurent déjà l'état du corps. Ces données biométriques complètent celles du lieu et permettent une réelle créativité."},
+        {"mur": 4, "titre": "Une musique qui suit le corps.", "texte": "La composition s'ajuste en direct aux signaux physiologiques de chacun, selon des règles écrites par le compositeur."},
+        {"mur": 4, "titre": "Une musique à la durée du soin.", "texte": "Ni début ni fin imposés, la composition se cale sur la structure et la durée réelle de chaque soin, sans boucle ni coupure."}
       ]
     },
     {
-      "atelier": "Mouvement",
-      "cards": [
-        {"famille": "invitation", "titre": "Immobiles, puis vite", "texte": "Restez immobiles : la musique respire, lente, presque suspendue. Maintenant bougez, vite : elle devient dense et rapide. Entre les deux, elle suit exactement l’énergie de vos gestes."},
-        {"famille": "perception", "titre": "L’énergie des gestes", "texte": "La salle mesure la quantité de mouvement dans la zone, pas vos gestes un par un. Plus vous vous agitez, plus la matière s’agite sur le mur et plus la musique s’intensifie."},
-        {"famille": "cas d’usage", "titre": "Au spa", "texte": "Pendant un soin, le son peut suivre le geste lent et ample du praticien, lui faire écho et prolonger la détente. La musique accompagne le corps au lieu de le couvrir."}
+      "touche": 3,
+      "nom": "Retail",
+      "cartes": [
+        {"mur": 1, "titre": "En l'absence de conviction pré établie, c'est l'émotion qui décide.", "texte": "En magasin, l'état émotionnel du client oriente le choix et la raison vient ensuite le justifier. Le son devient un levier de décision, que l'enseigne peut piloter."},
+        {"mur": 2, "titre": "La musique oriente ce qu'on met dans le panier.", "texte": "Dans un supermarché, une musique française fait vendre davantage de vin français, une musique allemande davantage de vin allemand. Les clients, eux, n'en ont pas conscience."},
+        {"mur": 2, "titre": "Le son accompagne tout le parcours.", "texte": "Il règle le rythme des déplacements, allonge le temps passé en rayon, réduit la perception du temps d'attente en caisse, oriente le choix des produits et oriente les déplacements. Une étude montre que le tempo seul a fait progresser les ventes de 38 %."},
+        {"mur": 3, "titre": "Le marketing sonore existe depuis 40 ans. Il lui manquait les données.", "texte": "Les données du magasin permettent aujourd'hui de l'adapter en direct, rayon par rayon, sans identifier personne."},
+        {"mur": 3, "titre": "Un magasin, plusieurs façons d'acheter.", "texte": "Au rayon frais, le client flâne. En épicerie, il veut aller vite. La musique sert l'objectif de chaque zone : faire durer la visite ici, fluidifier le passage là..."},
+        {"mur": 4, "titre": "Chaque enceinte, un levier sur le parcours.", "texte": "Bien placées, les enceintes découpent le magasin en zones, chacune avec son propre son. Plus le dispositif technique est riche, plus l'enseigne gagne en agilité pour orienter les flux et les comportements d'achat."}
       ]
     },
     {
-      "atelier": "Proximité",
-      "cards": [
-        {"famille": "invitation", "titre": "Approchez", "texte": "Il y a un objet, là. Approchez-vous : un son monte, s’éclaire, se précise à mesure que vous avancez. Éloignez-vous : il se retire."},
-        {"famille": "perception", "titre": "Un son qui appelle", "texte": "La salle mesure la distance entre vous et l’objet. À mesure que vous approchez, le son gagne en présence et en détail. Il guide sans rien imposer : c’est vous qui choisissez d’avancer."},
-        {"famille": "cas d’usage", "titre": "En rayon", "texte": "Dans un supermarché, un son discret peut attirer vers un produit ou un nouveau rayon. Un nudge sonore : une invitation qu’on entend en s’approchant, jamais une annonce qu’on subit."}
+      "touche": 4,
+      "nom": "Hôtel",
+      "cartes": [
+        {"mur": 1, "titre": "Dans un hôtel, tout est signé, sauf la musique.", "texte": "Chaque espace porte la signature d'un architecte ou d'un designer. La musique, elle, reste une playlist qu'on pourrait entendre ailleurs. Kikina compose la signature sonore que mérite un hôtel."},
+        {"mur": 1, "titre": "Un séjour est un parcours, la musique en écrit la continuité.", "texte": "De l'arrivée au départ, le client passe par des états très différents. La musique accompagne chaque transition, du hall à la chambre, sans jamais la rompre."},
+        {"mur": 2, "titre": "Un même espace n'appelle pas le même état à 8 h et à 22 h.", "texte": "La recherche relie la musique à notre état physiologique, qui varie au fil de la journée. Pour chaque moment, nous composons vers l'état que l'hôtel veut installer."},
+        {"mur": 3, "titre": "Le son est une architecture invisible, pensée avec le bâtiment.", "texte": "Sa diffusion se décide dès la conception, avec les architectes et les équipes techniques, pour se fondre dans le lieu."},
+        {"mur": 3, "titre": "L'hôtel connaît sa journée à l'avance. La musique aussi.", "texte": "Il sait heure par heure combien de clients arrivent ou partent et quand le restaurant se remplit. La musique s'appuie sur ces données pour s'adapter à chaque moment, chaque événement, chaque client."},
+        {"mur": 4, "titre": "Une seule signature, des couches qui s'ajoutent selon l'espace.", "texte": "Le compositeur écrit la signature de l'hôtel. Notre moteur adaptatif y ajoute des couches selon l'espace et l'objectif visé, et la fait évoluer sans jamais tourner en boucle."},
+        {"mur": 4, "titre": "Une musique qui ne se répète jamais.", "texte": "Riche et variée, elle se renouvelle à chaque instant et donne à l'hôtel une signature vivante, sans aucune playlist à gérer pour les équipes."}
       ]
     }
   ]

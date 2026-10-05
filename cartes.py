@@ -1,12 +1,15 @@
-"""Kikina @ RIITM : les titres des ateliers et les cards.
+"""Kikina @ RIITM : les panneaux des murs et les cartes use case.
 
-    python cartes.py      # autotest : place toutes les cards de tous les murs, vérifie portes, murs et
-                          # moitié haute, dessine le plan dans captures/plan_cards.png
+    python cartes.py      # autotest : place les 4 panneaux, vérifie portes et murs, simule chaque use case
+                          # (aucune carte ne se chevauche), dessine captures/plan_cards.png
 
-Chaque mur a son dossier assets/cards/murN/ : titre.png (le nom de l'atelier, toujours affiché) et
-ses cards (les autres PNG, montrées par ordre alphabétique tant qu'un groupe est dans la zone).
-Une card est une colonne sombre qui coupe le mur sur presque toute sa hauteur, son texte en haut.
-Déposer un PNG dans un dossier suffit : les dossiers sont relus toutes les 2 s.
+Panneaux : assets/cards/murN/panneau.png, toujours affiché sur le mur N. Une colonne sombre qui coupe
+le mur sur presque toute sa hauteur. Le fichier est relu dès qu'il change (toutes les 2 s).
+Use cases : assets/cards/T_nom/murN_XX.png (touche T), noir sur blanc, chacune à sa taille (plus large
+qu'un panneau : coupée). Elles sont lues dans l'ordre alphabétique, au moment du lancement.
+Une touche lance le use case : les cartes du mur N sortent une à une de sous son panneau, chacune à une
+hauteur tirée au hasard, glissent lentement vers la droite (derrière les portes) et disparaissent sous
+le panneau suivant (celui du mur N + 1 ; après le mur 4, le mur 1).
 Positions en pixels du bandeau à scale 1 : x de 0 à la largeur, y de 0 (haut) à la hauteur.
 """
 import time
@@ -16,9 +19,12 @@ import numpy as np
 from PIL import Image
 
 ICI = Path(__file__).parent
+CARDS = ICI / "assets/cards"
 LARGEUR_REF = 14446  # largeur pour laquelle les positions des murs et des portes sont données
 MURS = ((0, 5186), (5186, 7321), (7321, 12311), (12311, 14446))
 PORTES = ((1966, 2190, 475, 760), (11562, 12114, 64, 760), (13525, 14214, 76, 760))  # x0, x1, y0, y1
+CASES = 24  # cartes use case au plus en même temps (voir finition.frag)
+ATLAS = (8192, 2048)  # px à scale 1 : les cartes du use case y sont rangées en étagères
 
 
 def encre(chemin):
@@ -35,13 +41,10 @@ def se_touchent(r, s):
 class Mur:
     def __init__(self, n, x0, x1):
         self.n, self.x0, self.x1 = n, x0, x1
-        self.dossier = ICI / "assets/cards" / f"mur{n}"
-        self.etat, self.t = "repos", 0.0
-        self.suivante = 0          # rang de la prochaine card (on tourne dans l'ordre)
-        self.card = None           # (x0, y0, x1, y1) en px
-        self.titre = None
-        self.t_titre = 0.0
-        self.date_titre = None
+        self.dossier = CARDS / f"mur{n}"
+        self.panneau = None        # (x0, y0, x1, y1) en px
+        self.date = None
+        self.t = 0.0               # depuis l'apparition du panneau
 
 
 class Cartes:
@@ -52,30 +55,31 @@ class Cartes:
         self.scale = w / self.W
         self.murs = [Mur(n + 1, a * self.W / LARGEUR_REF, b * self.W / LARGEUR_REF) for n, (a, b) in enumerate(MURS)]
         self.portes = [(a * self.W / LARGEUR_REF, y0, b * self.W / LARGEUR_REF, y1) for a, b, y0, y1 in PORTES]
-        self.tex = ctx.texture((w, h), 1, np.zeros(w * h, dtype="u1").tobytes()) if ctx else None
-        self.rng = np.random.default_rng()
         self.cfg = cfg
+        aw, ah = (round(v * self.scale) for v in ATLAS)
+        self.tex = ctx.texture((w, h), 1, np.zeros(w * h, dtype="u1").tobytes()) if ctx else None
+        self.atlas = ctx.texture((aw, ah), 1, np.zeros(aw * ah, dtype="u1").tobytes()) if ctx else None
+        self.rng = np.random.default_rng()
         self.t_relu = -1e9
+        self.tour = []             # cartes en route : (x de départ, moment de sortie, durée du trajet, largeur, hauteur, y, place dans l'atlas)
+        self.v = 1.0               # leur vitesse (px/s), fixée au lancement
+        self.t = 0.0               # depuis le lancement du use case
+        self.fondu = 1.0           # 1 = visibles ; descend vers 0 quand on les efface
+        self.suivant = None        # use case qui attend la fin du fondu
 
-    # --- placement ------------------------------------------------------------
-    def place_titre(self, m, w, h):
-        c = self.cfg["cartes"]
-        return (m.x0 + c["marge_px"], c["haut_px"], m.x0 + c["marge_px"] + w, c["haut_px"] + h)
-
+    # --- panneaux -----------------------------------------------------------------
     def places_colonne(self, m, largeur):
         """Toutes les positions possibles d'une colonne de cette largeur sur le mur m : dans le mur,
-        de haut en bas (moins l'écart), loin des portes et du titre de l'atelier."""
+        de haut en bas (moins l'écart), loin des portes."""
         c = self.cfg["cartes"]
         g = c["marge_px"]
         obstacles = [(a - g, y0 - g, b + g, y1 + g) for a, y0, b, y1 in self.portes]
-        if m.titre:
-            obstacles.append((m.titre[0] - g, m.titre[1] - g, m.titre[2] + g, m.titre[3] + g))
         y0, y1 = c["ecart_px"], self.H - c["ecart_px"]
         places = [(x, y0, x + largeur, y1) for x in np.arange(m.x0 + g, m.x1 - g - largeur + 1, 20)]
         return [r for r in places if not any(se_touchent(r, o) for o in obstacles)]
 
     def colonne(self, lum):
-        """Le texte d'une card posé en haut de sa colonne : (image de la colonne, largeur) ou None s'il est trop haut."""
+        """Le texte d'un panneau centré dans sa colonne, ou None s'il est trop haut."""
         c = self.cfg["cartes"]
         i = c["interieur_px"]
         h, w = lum.shape
@@ -83,134 +87,169 @@ class Cartes:
         if h + 2 * i > haut:
             return None
         col = np.zeros((haut, w + 2 * i), dtype="f4")
-        col[i:i + h, i:i + w] = lum
+        y = (haut - h) // 2
+        col[y:y + h, i:i + w] = lum
         return col
 
-    # --- fichiers -----------------------------------------------------------------
-    def fichiers(self, m):
-        return sorted(p for p in m.dossier.glob("*.png") if p.name != "titre.png") if m.dossier.exists() else []
-
-    def ecrire(self, rect, lumiere):
-        """Envoie le texte à la carte graphique, à sa place (seule cette zone est transférée)."""
-        if self.tex is None:
+    def ecrire(self, tex, x, y, lumiere):
+        """Envoie une image (0 à 1) à la carte graphique, à sa place (en px à scale 1)."""
+        if tex is None:
             return
-        x, y = round(rect[0] * self.scale), round(rect[1] * self.scale)
         if self.scale != 1:
             h, w = lumiere.shape
             im = Image.fromarray((lumiere * 255).astype("u1")).resize((max(1, round(w * self.scale)), max(1, round(h * self.scale))), Image.LANCZOS)
             lumiere = np.asarray(im, dtype="f4") / 255
         h, w = lumiere.shape
-        self.tex.write((lumiere * 255).astype("u1").tobytes(), viewport=(x, y, w, h))
+        tex.write((lumiere * 255).astype("u1").tobytes(), viewport=(round(x * self.scale), round(y * self.scale), w, h))
 
     def relire(self):
-        """Titres : (re)chargés quand leur fichier change. Les cards sont lues au moment d'être montrées."""
+        """Panneaux : (re)chargés et placés quand leur fichier change. Au milieu de la place libre du mur."""
         for m in self.murs:
-            chemin = m.dossier / "titre.png"
+            chemin = m.dossier / "panneau.png"
             date = chemin.stat().st_mtime if chemin.exists() else None
-            if date == m.date_titre:
+            if date == m.date:
                 continue
-            m.date_titre, m.titre = date, None
-            if date is not None:
-                lum = encre(chemin)
-                m.titre = self.place_titre(m, lum.shape[1], lum.shape[0])
-                self.ecrire(m.titre, lum)
-                m.t_titre = 0.0
-
-    def montrer(self, m):
-        """Prend la card suivante du mur, lui trouve une place. False si aucune ne convient."""
-        liste = self.fichiers(m)
-        for _ in range(len(liste)):
-            chemin = liste[m.suivante % len(liste)]
-            m.suivante += 1
-            try:
-                lum = encre(chemin)
-            except OSError as err:
-                print(f"mur {m.n} : {chemin.name} illisible ({err})")
+            m.date, m.panneau, m.t = date, None, 0.0
+            if date is None:
                 continue
-            h, w = lum.shape
-            col = self.colonne(lum)
+            col = self.colonne(encre(chemin))
             places = self.places_colonne(m, col.shape[1]) if col is not None else []
             if not places:
-                print(f"mur {m.n} : {chemin.name} ({w} x {h} px) ne tient pas sur ce mur, ignorée")
+                print(f"mur {m.n} : panneau.png ne tient pas sur ce mur, ignoré")
                 continue
-            loin = [r for r in places if m.card is None or abs(r[0] - m.card[0]) > col.shape[1]]
-            m.card = tuple(float(v) for v in (loin or places)[self.rng.integers(len(loin or places))])
-            self.ecrire(m.card, col)
-            print(f"mur {m.n} : card {chemin.name}")
-            return True
-        return False
+            m.panneau = tuple(float(v) for v in places[len(places) // 2])
+            self.ecrire(self.tex, m.panneau[0], m.panneau[1], col)
 
-    # --- cycle de vie ---------------------------------------------------------------
-    def avancer(self, dt, presences, cfg):
-        """presences : présence lissée (0 à 1) de chaque zone. Zone N = mur N."""
+    # --- use cases ------------------------------------------------------------------
+    def lancer(self, touche):
+        """Touche 1 à 9 : lance ce use case (les cartes en route s'effacent d'abord). 0 : efface tout."""
+        if self.tour and self.fondu > 0:
+            self.fondu = min(self.fondu, 0.999)  # déclenche le fondu
+            self.suivant = touche or None
+            return
+        self.suivant = None
+        if not touche:
+            return
+        dossiers = sorted(CARDS.glob(f"{touche}_*"))
+        if not dossiers:
+            print(f"touche {touche} : aucun dossier assets/cards/{touche}_...")
+            return
+        c = self.cfg["cartes"]
+        haut, self.v = self.H - 2 * c["ecart_px"], c["carte_vitesse_px_s"]
+        self.tour, ax, ay, etagere, sortie = [], 0, 0, 0, {}
+        for chemin in sorted(dossiers[0].glob("mur[1-4]_*.png")):
+            m = self.murs[int(chemin.name[3]) - 1]
+            arrivee = self.murs[m.n % 4]   # le panneau suivant, vers la droite (le bandeau boucle)
+            if m.panneau is None or arrivee.panneau is None:
+                print(f"{chemin.name} : panneau du mur {m.n} ou du suivant absent, ignorée")
+                continue
+            try:  # jamais plus large qu'un des deux panneaux : elle doit pouvoir s'y cacher
+                lum = encre(chemin)[:haut, :round(min(m.panneau[2] - m.panneau[0], arrivee.panneau[2] - arrivee.panneau[0]))]
+            except OSError as err:
+                print(f"{chemin.name} illisible ({err})")
+                continue
+            h, w = lum.shape
+            if ax + w > ATLAS[0]:      # étagère pleine : on passe à la suivante
+                ax, ay, etagere = 0, ay + etagere, 0
+            if ay + h > ATLAS[1] or len(self.tour) == CASES:
+                print(f"{dossiers[0].name} : trop de cartes, {chemin.name} et les suivantes sont ignorées")
+                break
+            self.ecrire(self.atlas, ax, ay, lum)
+            y = self.rng.uniform(c["ecart_px"], self.H - c["ecart_px"] - h)
+            atlas = (ax / ATLAS[0], ay / ATLAS[1], (ax + w) / ATLAS[0], (ay + h) / ATLAS[1])
+            x = m.panneau[2] - w                      # cachée sous son panneau, bord droit contre le sien
+            trajet = (arrivee.panneau[0] - x) % self.W  # jusqu'à être cachée sous le suivant, bord gauche contre le sien
+            te = sortie.get(m.n, 0.0)
+            sortie[m.n] = te + (w + c["carte_ecart_px"]) / self.v  # la suivante sort quand celle-ci a dégagé l'écart
+            self.tour.append((x, te, trajet / self.v, w, h, y, atlas))
+            ax, etagere = ax + w + 2, max(etagere, h + 2)
+        self.t, self.fondu = 0.0, 1.0
+        fin = max((te + d for _, te, d, *_ in self.tour), default=0)
+        print(f"use case {dossiers[0].name} : {len(self.tour)} cartes, {fin / 60:.1f} min")
+
+    def avancer(self, dt, cfg):
         self.cfg = cfg
         c = cfg["cartes"]
         if time.monotonic() - self.t_relu > 2:
             self.t_relu = time.monotonic()
             self.relire()
-        for m, p in zip(self.murs, presences):
+        for m in self.murs:
             m.t += dt
-            m.t_titre += dt
-            present = p > c["presence_seuil"]
-            if m.etat == "repos" and present:
-                m.etat, m.t = "attente", 0.0
-            elif m.etat == "attente" and not present:
-                m.etat = "repos"
-            elif (m.etat == "attente" and m.t >= c["attente_s"]) or (m.etat == "pause" and m.t >= c["pause_s"] and present):
-                m.etat, m.t = ("apparition", 0.0) if self.montrer(m) else ("pause", 0.0)
-            elif m.etat == "pause" and m.t >= c["pause_s"]:
-                m.etat = "repos"
-            elif m.etat == "apparition" and m.t >= c["apparition_s"]:
-                m.etat, m.t = "affichage", 0.0
-            elif m.etat == "affichage" and m.t >= c["affichage_s"]:
-                m.etat, m.t = "dissolution", 0.0
-            elif m.etat == "dissolution" and m.t >= c["dissolution_s"]:
-                m.etat, m.t = "pause", 0.0
+        self.t += dt
+        if self.fondu < 1 and self.tour:
+            self.fondu = max(0.0, self.fondu - dt / c["fondu_s"])
+            if self.fondu == 0:
+                self.tour = []
+                self.lancer(self.suivant)
+        if self.tour and self.t > max(te + d for _, te, d, *_ in self.tour):
+            self.tour = []
+
+    def positions(self, t):
+        """x (px) de chaque carte en route à l'instant t, ou None si elle n'est pas sortie ou déjà arrivée."""
+        return [x + self.v * (t - te) if te <= t < te + d else None for x, te, d, *_ in self.tour]
 
     def uniformes(self):
-        """Pour les shaders : 8 rectangles (4 titres, 4 cards) en hauteurs de bandeau, et leur état
-        (visibilité 0 à 1, sens +1 condensation / -1 dissolution / 0, lumière)."""
+        """Pour les shaders : 8 rectangles en hauteurs de bandeau (les panneaux en 4 à 7, 0 à 3 libres) et
+        leur état (visibilité 0 à 1, sens +1 condensation / 0, lumière) ; les cartes en route
+        (x, y, largeur, hauteur en hauteurs de bandeau ; largeur 0 = pas de carte) et leur place dans l'atlas."""
         c = self.cfg["cartes"]
         rects, etats = np.zeros((8, 4), dtype="f4"), np.zeros((8, 4), dtype="f4")
         for i, m in enumerate(self.murs):
-            if m.titre:
-                v = min(1.0, m.t_titre / c["apparition_s"])
-                rects[i], etats[i] = np.array(m.titre) / self.H, (v, 1.0 if v < 1 else 0.0, c["titre_lumiere"], 0)
-            if m.card and m.etat in ("apparition", "affichage", "dissolution"):
-                v, sens = {"apparition": (m.t / c["apparition_s"], 1.0), "affichage": (1.0, 0.0),
-                           "dissolution": (1 - m.t / c["dissolution_s"], -1.0)}[m.etat]
-                rects[4 + i], etats[4 + i] = np.array(m.card) / self.H, (min(1.0, max(0.0, v)), sens, 1.0, 0)
-        return rects, etats
+            if m.panneau:
+                v = min(1.0, m.t / c["apparition_s"])
+                rects[4 + i], etats[4 + i] = np.array(m.panneau) / self.H, (v, 1.0 if v < 1 else 0.0, 1.0, 0)
+        voyage, atlas = np.zeros((CASES, 4), dtype="f4"), np.zeros((CASES, 4), dtype="f4")
+        for k, (x, (*_, w, h, y, a)) in enumerate(zip(self.positions(self.t), self.tour)):
+            if x is not None:
+                voyage[k], atlas[k] = np.array(((x % self.W), y, w, h)) / self.H, a
+        return rects, etats, voyage, atlas
+
+    def portes_uniformes(self):
+        """Portes (x0, y0, x1, y1) en hauteurs de bandeau."""
+        return np.array(self.portes, dtype="f4") / self.H
 
 
 if __name__ == "__main__":  # autotest
     import tomllib
     from PIL import ImageDraw
     cfg = tomllib.loads((ICI / "config.toml").read_text(encoding="utf-8"))
+    c = cfg["cartes"]
     ca = Cartes(None, cfg, cfg["sortie"]["largeur"], cfg["sortie"]["hauteur"])
     ca.relire()
-    fond = Image.open(ICI / "assets/mire_club_immersif_14446x760.jpg").convert("L").resize((ca.W, ca.H)).point(lambda v: v // 4)
-    plan = fond.copy()
+    plan = Image.open(ICI / "assets/mire_club_immersif_14446x760.jpg").convert("L").resize((ca.W, ca.H)).point(lambda v: v // 4)
     d = ImageDraw.Draw(plan)
     for m in ca.murs:
-        assert m.titre, f"mur {m.n} : pas de titre.png"
-        rects = [(m.titre, encre(m.dossier / "titre.png"))]
-        for chemin in ca.fichiers(m):
-            lum = encre(chemin)
-            col = ca.colonne(lum)
-            assert col is not None, f"mur {m.n} : {chemin.name} trop haut pour une colonne"
-            places = ca.places_colonne(m, col.shape[1])
-            assert places, f"mur {m.n} : {chemin.name} ne tient nulle part"
-            rects.append((places[len(places) // 2], col))
-            for r in places:  # toutes les positions possibles respectent les règles
-                assert m.x0 <= r[0] and r[2] <= m.x1, f"{chemin.name} déborde du mur {m.n}"
-                assert r[1] >= cfg["cartes"]["ecart_px"] and r[3] <= ca.H - cfg["cartes"]["ecart_px"], f"{chemin.name} touche le haut ou le bas"
-                assert not any(se_touchent(r, (a, y0, b, y1)) for a, y0, b, y1 in ca.portes), f"{chemin.name} touche une porte"
-                assert not se_touchent(r, m.titre), f"{chemin.name} touche le titre"
-            print(f"mur {m.n} : {chemin.name} {lum.shape[1]} x {lum.shape[0]} px, {len(places)} positions possibles")
-        for r, lum in rects[:2]:  # le plan montre le titre et la première card
-            plan.paste(Image.new("L", (round(r[2] - r[0]), round(r[3] - r[1])), 10), (round(r[0]), round(r[1])))
-            plan.paste(Image.fromarray((lum * 255).astype("u1")), (round(r[0]), round(r[1])), Image.fromarray((lum * 255).astype("u1")))
+        assert m.panneau, f"mur {m.n} : pas de panneau.png, ou il ne tient pas"
+        r = m.panneau
+        assert m.x0 <= r[0] and r[2] <= m.x1, f"panneau {m.n} déborde du mur"
+        assert not any(se_touchent(r, p) for p in ca.portes), f"panneau {m.n} touche une porte"
+        lum = encre(m.dossier / "panneau.png")
+        col = (ca.colonne(lum) * 255).astype("u1")
+        plan.paste(Image.new("L", (col.shape[1], col.shape[0]), 18), (round(r[0]), round(r[1])))
+        plan.paste(Image.fromarray(col), (round(r[0]), round(r[1])), Image.fromarray(col))
+        print(f"mur {m.n} : panneau {lum.shape[1]} x {lum.shape[0]} px, x {r[0]:.0f} à {r[2]:.0f}")
+    for touche in range(1, 5):
+        ca.tour, ca.fondu = [], 1.0
+        ca.lancer(touche)
+        assert ca.tour, f"touche {touche} : aucune carte"
+        fin, groupes = max(te + d for _, te, d, *_ in ca.tour), {}
+        for k, (x, te, dur, w, h, y, _) in enumerate(ca.tour):
+            m = next(m for m in ca.murs if abs(m.panneau[2] - (x + w)) < 1e-6)  # son panneau de départ
+            arrivee, fin_x = ca.murs[m.n % 4], (x + ca.v * dur) % ca.W
+            assert x >= m.panneau[0], f"touche {touche} : une carte dépasse de son panneau au départ"
+            assert abs(fin_x - arrivee.panneau[0]) < 1e-6 and fin_x + w <= arrivee.panneau[2], f"touche {touche} : une carte n'est pas cachée à l'arrivée"
+            assert c["ecart_px"] <= y and y + h <= ca.H - c["ecart_px"], f"touche {touche} : une carte touche le haut ou le bas"
+            groupes.setdefault(m.n, []).append(k)
+        for t in np.arange(0, fin, 0.5):  # deux cartes parties du même panneau ne se touchent jamais
+            pos = ca.positions(t)
+            for ks in groupes.values():
+                xs = sorted((pos[k], ca.tour[k][3]) for k in ks if pos[k] is not None)
+                for (a, w), (b, _) in zip(xs, xs[1:]):
+                    assert b - a >= w, f"touche {touche} : deux cartes se chevauchent à t = {t} s"
+        if touche == 1:  # le plan montre la touche 1 au tiers de son déroulé
+            for x, (*_, w, h, y, _) in zip(ca.positions(fin / 3), ca.tour):
+                if x is not None:
+                    d.rectangle((round(x % ca.W), round(y), round(x % ca.W + w), round(y + h)), outline=230, width=6)
     for a, y0, b, y1 in ca.portes:
         d.rectangle((round(a), y0, round(b), y1), fill=90)
     (ICI / "captures").mkdir(exist_ok=True)

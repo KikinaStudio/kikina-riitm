@@ -4,10 +4,12 @@
     python kikina.py --secondes 20    # s'arrête seul et enregistre une capture (pour les tests)
     python kikina.py --zone 2         # la zone 2 reste agitée (tests sans clavier)
     python kikina.py --note           # une note forte toutes les 4 s (tests sans le son)
+    python kikina.py --usecase 1      # lance le use case 1 au démarrage (tests sans clavier)
 
 Touches dans la fenêtre :
     A Z E R maintenues : quelqu'un bouge dans la zone 1, 2, 3, 4 ; Maj + A Z E R : présence immobile
     C calme, M moyen, D dense (forcés) ; S la marée suit la musique
+    1 Santé, 2 Wellness, 3 Retail, 4 Hôtel : les cartes du use case font le tour de la salle ; 0 les efface
     P capture PNG, Échap quitter
 Bouger la souris dans l'aperçu simule un visiteur qui bouge à cet endroit du mur.
 Les fichiers de shaders/ et config.toml sont rechargés dès qu'on les enregistre.
@@ -89,6 +91,7 @@ class Kikina(mglw.WindowConfig):
         parser.add_argument("--agiter", action="store_true", help="simule un visiteur qui tourne en rond sur le mur 1")
         parser.add_argument("--zone", type=int, choices=range(1, 5), help="la zone N reste agitée")
         parser.add_argument("--note", action="store_true", help="une note forte toutes les 4 s")
+        parser.add_argument("--usecase", type=int, help="lance ce use case au démarrage (comme la touche)")
 
     def __init__(self, **kw):
         super().__init__(**kw)
@@ -135,7 +138,7 @@ class Kikina(mglw.WindowConfig):
         self.excitation_tex.repeat_x, self.excitation_tex.repeat_y = True, False
         self.souris = None  # (x, y) en fraction du bandeau, et énergie du mouvement depuis la dernière image
         self.souris_energie = 0.0
-        self.cartes = Cartes(ctx, self.cfg, self.w, self.h)  # titres des ateliers et cards
+        self.cartes = Cartes(ctx, self.cfg, self.w, self.h)  # panneaux des murs et cartes use case
         self.image = ctx.texture((self.w, self.h), 4)
         self.image_fbo = ctx.framebuffer([self.image])
         self.pixels = np.empty(self.w * self.h * 4, dtype=np.uint8)
@@ -165,12 +168,15 @@ class Kikina(mglw.WindowConfig):
         self.sim_presence = [0.0] * 4      # Maj + A Z E R
         if self.argv.zone:
             self.sim_bouge[self.argv.zone - 1] = 1.0
+        if self.argv.usecase:
+            self.cartes.relire()
+            self.cartes.lancer(self.argv.usecase)
         self.ondes = deque(maxlen=8)       # [x, y, âge (s), force]
         self.rng = np.random.default_rng()
         self.notes_vues = 0
 
         print(f"{self.nombre} particules, sortie {self.w} x {self.h} px, NDI '{sortie['nom_ndi']}'")
-        print("Touches : A Z E R zones (Maj = présence), C M D forcer, S musique, P capture, Échap quitter.\n")
+        print("Touches : A Z E R zones (Maj = présence), C M D forcer, S musique, 1 à 4 use case (0 efface), P capture, Échap quitter.\n")
         self.moi = psutil.Process()
         self.moi.cpu_percent()
         self.debut = self.prochaine = self.t_stats = self.t_verif = time.perf_counter()
@@ -223,8 +229,8 @@ class Kikina(mglw.WindowConfig):
         self.temps += dt
         self.n += 1
         self.agiter(m, dt)
-        self.cartes.avancer(dt, [self.lisse.get(f"presence{i}", 0.0) for i in range(4)], self.cfg)
-        rects, etats = self.cartes.uniformes()
+        self.cartes.avancer(dt, self.cfg)
+        rects, etats, voyage, voyage_atlas = self.cartes.uniformes()
         c, H = self.cfg["cartes"], self.cfg["sortie"]["hauteur"]
         commun = dict(
             aspect=self.aspect, temps=self.temps, echelle=self.scale,
@@ -274,7 +280,10 @@ class Kikina(mglw.WindowConfig):
         self.matiere.use(0)
         self.champs.use(1)
         self.cartes.tex.use(5)
-        regler(self.progs["finition"], matiere=0, champs=1, encre=5, fond=self.cfg["cartes"]["fond"], exposition=p["exposition"], brume=p["brume"],
+        self.cartes.atlas.use(6)
+        regler(self.progs["finition"], matiere=0, champs=1, encre=5, fond=c["fond"], atlas=6, voyage=voyage,
+               voyage_atlas=voyage_atlas, voyage_fondu=self.cartes.fondu, blanc=c["carte_blanc"],
+               portes=self.cartes.portes_uniformes(), arrondi=c["arrondi_px"] / H, carte_grain=c["carte_grain"], exposition=p["exposition"], brume=p["brume"],
                plancher=m["plancher"], grain_px=m["grain_px"], grain_force=m["grain_force"],
                grain_image=int(self.temps * m["grain_ips"]), **commun)
         self.vaos["finition"].render(moderngl.TRIANGLE_STRIP)
@@ -317,7 +326,7 @@ class Kikina(mglw.WindowConfig):
             a, b = a / LARGEUR_REF, b / LARGEUR_REF
             profil = profil_zone(x, a, b)
             presence = self.suivre(f"presence{i}", max(E.zone("presence", i), self.sim_presence[i], self.sim_bouge[i]),
-                                   z["presence_s"], dt)  # sert aussi aux cards
+                                   z["presence_s"], dt)
             tp, te = E.tranches("presence", i), E.tranches("energie", i)
             if tp is None or te is None:
                 apport += max(E.zone("energie", i), self.sim_bouge[i]) * profil
@@ -456,6 +465,8 @@ class Kikina(mglw.WindowConfig):
             print(f"-> {self.cible}")
         elif key == k.P:
             self.capture()
+        elif key in (chiffres := [k.NUMBER_0, k.NUMBER_1, k.NUMBER_2, k.NUMBER_3, k.NUMBER_4]):
+            self.cartes.lancer(chiffres.index(key))
 
     def on_close(self):
         self.entrees.fermer()

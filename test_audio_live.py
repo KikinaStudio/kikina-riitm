@@ -77,6 +77,31 @@ class AudioTests(unittest.TestCase):
         self.avancer(1)
         self.assertEqual(len(self.notes), 2)  # only the first note-off, no stale step
 
+    def test_fugue_replays_track_one_notes(self):
+        from collections import deque
+        self.p.ecoutees = deque(maxlen=2)
+        for note in (60, 64, 67):  # la piste 1 joue do, mi, sol : seuls les 2 derniers sont gardés
+            self.p.entendre(note)
+        joues = []
+        for _ in range(3):  # 3 gestes : mi et sol dans un ordre au hasard, puis rien (la piste 1 s'est tue)
+            self.p.recevoir("/zone/1/energie", 0.9)
+            self.avancer(2)
+            joues += [m[1] for m in self.notes if m[0]]
+            self.notes.clear()
+            self.p.recevoir("/zone/1/energie", 0)
+            self.avancer(0.1)
+        self.assertEqual(sorted(joues), [64, 67])
+
+    def test_efx_rises_gently_and_track_one_follows_movement(self):
+        self.p.recevoir("/zone/2/presence", 1.0)
+        self.p.recevoir("/zone/2/energie", 1.0)
+        self.avancer(0.5)
+        self.assertGreaterEqual(dict(self.cc)[23], 120)  # piste 1 : suit le mouvement en 0,5 s
+        self.assertLess(dict(self.cc)[22], 90)           # EFX : arrive doucement (montee_s = 2)
+        self.p.recevoir("/zone/2/presence", 1.0)         # la caméra envoie en continu (sinon expiration à 3 s)
+        self.avancer(2.4)
+        self.assertGreaterEqual(dict(self.cc)[22], 120)
+
     def test_validation(self):
         for key, value in (("cadence", 0), ("canal", 17), ("montee_s", float("nan"))):
             c = copy.deepcopy(self.c)

@@ -8,6 +8,7 @@ python audio_live.py --list-ports
 import argparse
 from collections import deque
 import math
+import random
 from pathlib import Path
 import re
 import signal
@@ -53,6 +54,9 @@ def valider(c):
             raise ValueError("seuil doit être entre 0 et 0.99")
         if not entier(r["minimum"], 0, 127) or not entier(r["maximum"], r["minimum"], 127):
             raise ValueError("Il faut 0 <= minimum <= maximum <= 127")
+        for cle in ("montee_s", "retombee_s"):  # facultatifs : sinon ceux de [audio_live]
+            if cle in r and not nombre(r[cle], 0.01, 60):
+                raise ValueError(f"{cle} doit être entre 0.01 et 60 secondes")
     n = c.get("notes", {})
     if n.get("actif"):
         if not entier(n["canal"], 1, 16) or n["canal"] == c["canal"]:
@@ -67,6 +71,8 @@ def valider(c):
                 raise ValueError(f"Notes : {cle} invalide")
         if not entier(n["velocite_min"], 1, 127) or not entier(n["velocite_max"], n["velocite_min"], 127):
             raise ValueError("Notes : vélocités invalides")
+        if not isinstance(n.get("ecoute", ""), str) or not entier(n.get("retard", 8), 1, 64):
+            raise ValueError("Notes : ecoute (nom de port) ou retard (1 à 64 notes) invalide")
     return c
 
 
@@ -86,6 +92,7 @@ class Pont:
         self.armees = [True] * 4
         self.note_date = -math.inf
         self.notes_actives = {}
+        self.ecoutees = None  # deque des notes jouées par la piste 1, si le pont les écoute
 
     def recevoir(self, adresse, *valeurs):
         if adresse == "/accueil/pas":
@@ -105,6 +112,12 @@ class Pont:
         with self.verrou:
             self.zones[int(m[1]), m[2]] = min(1.0, max(0.0, v)), self.horloge()
 
+    def entendre(self, note):
+        """Une note jouée par la piste 1 (fil MIDI) : la piste 2 la rejouera au prochain geste."""
+        if self.ecoutees is not None:
+            with self.verrou:
+                self.ecoutees.append(note)
+
     def actualiser(self):
         maintenant = self.horloge()
         dt = max(0.0, maintenant - self.date)
@@ -122,7 +135,7 @@ class Pont:
             cible = max(0.0, (cible - r["seuil"]) / (1 - r["seuil"]))
             cc = r["cc"]
             niveau = self.niveaux[cc]
-            duree = self.c["montee_s"] if cible > niveau else self.c["retombee_s"]
+            duree = r.get("montee_s", self.c["montee_s"]) if cible > niveau else r.get("retombee_s", self.c["retombee_s"])
             niveau += (cible - niveau) * (1 - math.exp(-3 * dt / duree))
             self.niveaux[cc] = niveau
             valeur = round(r["minimum"] + niveau * (r["maximum"] - r["minimum"]))
@@ -165,7 +178,18 @@ class Pont:
                 self.armees[i] = False  # consommer le geste même pendant le délai
         if candidats and maintenant - self.note_date >= n["intervalle_s"]:
             force, i = max(candidats)
-            jouer(n["notes_zones"][i], force)
+            if self.ecoutees is None:
+                jouer(n["notes_zones"][i], force)
+            else:  # fugue : une des dernières notes de la piste 1 au hasard, une seule fois ; rien si elle se tait
+                with self.verrou:
+                    note = None
+                    if self.ecoutees:
+                        i = random.randrange(len(self.ecoutees))
+                        note = self.ecoutees[i]
+                        del self.ecoutees[i]
+                if note is None:
+                    return
+                jouer(note, force)
             self.note_date = maintenant
 
     def repos(self):
@@ -176,19 +200,19 @@ class Pont:
         self.notes_actives.clear()
 
 
-def ouvrir_midi(c):
+def ouvrir_midi(c, nom, entree=False):
     import rtmidi
-    midi = rtmidi.MidiOut(name="KIKINA")
+    midi = (rtmidi.MidiIn if entree else rtmidi.MidiOut)(name="KIKINA")
     if c["midi_virtuel"]:
         try:
-            midi.open_virtual_port(c["midi_port"])
+            midi.open_virtual_port(nom)
         except (rtmidi.RtMidiError, NotImplementedError) as err:
             raise RuntimeError("Port virtuel indisponible. Sous Windows, créer un port loopMIDI, puis midi_virtuel = false.") from err
     else:
         ports = midi.get_ports()
-        correspondants = [i for i, p in enumerate(ports) if p == c["midi_port"]]
+        correspondants = [i for i, p in enumerate(ports) if p == nom]
         if len(correspondants) != 1:
-            raise ValueError(f"Port MIDI exact introuvable ou ambigu : {c['midi_port']}. Disponibles : {ports}")
+            raise ValueError(f"Port MIDI exact introuvable ou ambigu : {nom}. Disponibles : {ports}")
         midi.open_port(correspondants[0])
     return midi
 
@@ -213,12 +237,12 @@ def main():
     arret = threading.Event()
     signal.signal(signal.SIGTERM, lambda *_: arret.set())
     signal.signal(signal.SIGINT, lambda *_: arret.set())
-    midi = serveur = fil = pont = None
+    midi = ecoute = serveur = fil = pont = None
     try:
         # Réserver le port OSC avant de créer le port MIDI (évite deux ponts).
         disp = Dispatcher()
         serveur = BlockingOSCUDPServer((c["osc_hote"], c["osc_port"]), disp)
-        midi = None if a.dry_run else ouvrir_midi(c)
+        midi = None if a.dry_run else ouvrir_midi(c, c["midi_port"])
 
         def envoyer(cc, valeur):
             if midi:
@@ -233,6 +257,12 @@ def main():
                 print(f"Note {'ON' if on else 'OFF'} {note}, vélocité {vitesse}", flush=True)
 
         pont = Pont(c, envoyer, envoyer_note=envoyer_note)
+        n = c.get("notes", {})
+        if n.get("actif") and n.get("ecoute") and a.learn is None and not a.dry_run:
+            pont.ecoutees = deque(maxlen=n["retard"])
+            ecoute = ouvrir_midi(c, n["ecoute"], entree=True)
+            ecoute.set_callback(lambda m, _: m[0][0] & 0xF0 == 0x90 and m[0][2] and pont.entendre(m[0][1]))
+            print(f"Écoute de la piste 1 sur {n['ecoute']} : chaque geste rejoue une de ses notes.", flush=True)
         if a.learn is None:
             disp.set_default_handler(pont.recevoir)
             fil = threading.Thread(target=serveur.serve_forever, daemon=True)
@@ -266,6 +296,8 @@ def main():
                         midi.send_message([0xB0 + c["canal"] - 1, r["cc"], r["minimum"]])
             finally:
                 midi.close_port()
+        if ecoute:
+            ecoute.close_port()
 
 
 if __name__ == "__main__":

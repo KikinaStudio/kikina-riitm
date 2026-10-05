@@ -8,7 +8,7 @@ ces chiffres en OSC à kikina.py.
 
 Touches dans la fenêtre : F = reprendre le fond (la salle vide, 5 s plus tard), P = photo de ce que
 voit chaque caméra (dans captures/), S = série de 10 photos, une par seconde (le temps d'aller se placer
-dans le champ), Échap = quitter.
+dans le champ), C = image brute sans les couleurs de détection (pour régler les caméras), Échap = quitter.
 
 Présence = ce qui diffère du fond (la salle vide). Mouvement = ce qui diffère de l'image d'avant.
 Atelier Accueil : des bandes au sol à franchir dans l'ordre, chacune envoie `/accueil/pas` 1, 2, 3.
@@ -210,6 +210,7 @@ class Camera:
         self.titre = cherche  # "camera1", "camera2"... dans la fenêtre et les photos (deux caméras peuvent porter le même nom)
         self.figee = False
         self.retournee = False  # caméra fixée tête en bas : on remet l'image à l'endroit
+        self.brut = False       # touche C : image sans les couleurs de détection
         self.pas, self.touchees = Pas(), []
         self.tranches = {}  # zone : mouvement de chaque tranche, pour l'image de contrôle
         self.cap = self.identifiant = self.image = self.nouvelle = None
@@ -331,7 +332,7 @@ def dessiner(cam, gris, zones, mesures, c, bandes=(), murs=None, tranches=None):
     """Image de contrôle : en bleu ce qui diffère du fond, en blanc ce qui bouge, en vert les bandes des pas,
     en violet la ligne de chaque mur avec ses tranches (un disque grossit quand ça bouge dans sa tranche)."""
     vue = cv2.cvtColor(gris.astype("u1"), cv2.COLOR_GRAY2BGR)
-    if cam.fond is not None:
+    if cam.fond is not None and not cam.brut:
         vue[np.abs(gris - cam.fond_vu) > c["seuil"]] = (255, 120, 0)
         vue[np.abs(gris - cam.avant) > c["seuil"]] = (255, 255, 255)
     vue = cv2.resize(vue, None, fx=3, fy=3, interpolation=cv2.INTER_NEAREST)
@@ -410,7 +411,7 @@ def main():
     cv2.resizeWindow("capteurs", 1440, 1440 * 720 // (960 * len(cameras)))
     montre = 0.0
     clients = [SimpleUDPClient(v.rsplit(":", 1)[0], int(v.rsplit(":", 1)[1])) for v in c["osc_vers"]]
-    print(f"OSC : envoi vers {', '.join(c['osc_vers'])}. Touches : F = reprendre le fond, P = photo, S = série de 10 photos, Échap = quitter.")
+    print(f"OSC : envoi vers {', '.join(c['osc_vers'])}. Touches : F = reprendre le fond, P = photo, S = série de 10 photos, C = image brute, Échap = quitter.")
 
     def envoyer(adresse, valeur):
         for client in clients:
@@ -523,6 +524,9 @@ def main():
             break
         if touche in (ord("p"), ord("P")):
             photo()
+        if touche in (ord("c"), ord("C")):
+            for cam in cameras:
+                cam.brut = not cam.brut
         if touche in (ord("s"), ord("S")):
             serie_fin, serie_suivante = maintenant + 10, maintenant
             print("Série : une photo par seconde pendant 10 s")

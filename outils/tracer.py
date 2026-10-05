@@ -186,6 +186,11 @@ def main(lieu, num, photo):
             etat["points"].pop()
         elif touche in (ord("s"), ord("S")):
             chemin.parent.mkdir(exist_ok=True)
+            # relire : une autre fenêtre (une autre caméra) a pu enregistrer entre-temps ; on ne remplace que la nôtre
+            cameras = tomllib.loads(chemin.read_text(encoding="utf-8"))["camera"] if chemin.exists() else cameras
+            while len(cameras) < num:
+                cameras.append({"nom": "HD USB Camera", "retournee": False, "zones": {}})
+            cameras[num - 1] = cam
             ecrire(chemin, cameras)
             etat["modifie"] = False
             dire(f"Enregistré dans lieux/{chemin.name}")
