@@ -4,6 +4,19 @@
 
 ---
 
+## 6 octobre 2026 (matin, jour J) - Photos des caméras pour le tracé
+
+- Caméras changées de prise USB : identifiants recopiés dans `lieux/salle.toml` (caméra 1 retournée `0x111110032e49230`, caméra 2 `0x113000032e49230`).
+- Photos pour `outils/tracer.py` : `captures/camera1_081315.jpg` (remise à l'endroit) et `captures/camera2_081935.jpg` (refaite après le refixage des caméras), en 640 x 480 et éclaircies. Vérifié : même cadrage qu'en 320 x 240 (la taille que mesure capteurs.py), les tracés restent justes.
+- Le Terminal de l'app Claude n'a pas le droit d'utiliser les caméras : les photos se prennent depuis le Terminal du Mac.
+- **Caméra 1 instable** sur sa rallonge (quelques images après chaque branchement, puis plus rien), même avec les 2 rallonges d'hier. Solution de Jérémie à 9 h 10 : les 2 caméras sans rallonge, sur le même mur, chacune vers un côté de la salle. Caméra 1 retournée, voit les murs 1, 2, 3 ; caméra 2 voit 1, 3, 4. Zones et lignes tracées par Jérémie.
+- `capteurs.py` démarre même si une caméra manque : il la cherche toutes les 2 s et l'ajoute dès qu'elle livre.
+- Nouvel outil `outils/voir_cameras.py` : les caméras en direct (vert = livre, rouge = muette), se met à jour seul au branchement, P = photos pour le tracé. À fermer avant de lancer capteurs.py (il occupe les caméras).
+- `outils/tracer.py` : légende des murs sous la photo, Retour arrière remonte étape par étape (clic, zone, ligne).
+- 9 h 27 : capteurs lancés, 2 caméras à 30 i/s, 4 zones.
+
+---
+
 ## 5 octobre 2026 (soir) - Cartes de panneau à panneau, son de l'approche et du mouvement
 
 ### Ce qui a été fait

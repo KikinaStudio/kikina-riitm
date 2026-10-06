@@ -26,6 +26,9 @@ import numpy as np
 
 ICI = Path(__file__).resolve().parent.parent
 ATELIERS = {"1": "Accueil", "2": "Densité", "3": "Mouvement", "4": "Proximité"}
+LEGENDE = ["1 = mur 1 Accueil, GRAND mur cote portes      2 = mur 2 Densite, petit mur",
+           "3 = mur 3 Mouvement, GRAND mur en face du 1    4 = mur 4 Proximite, petit mur",
+           "Retour arriere : annule le dernier clic, puis l'etape d'avant (zone, ligne).  S : enregistrer"]
 LARGEUR = 960  # largeur de la fenêtre
 CLES = ("nom", "identifiant", "retournee", "note", "zones", "murs", "pas")
 
@@ -101,6 +104,7 @@ def main(lieu, num, photo):
                 return
             dire(f"Zone {n} : pas de zone, rien à faire")
         elif mode == "mur":
+            etat["dernier"] = n
             if valeur:
                 cam["murs"][n] = valeur
             else:
@@ -113,7 +117,7 @@ def main(lieu, num, photo):
         etat["mode"], etat["points"], etat["modifie"] = None, [], True
 
     def clic(evenement, x, y, *_):
-        if evenement != cv2.EVENT_LBUTTONDOWN or etat["mode"] is None:
+        if evenement != cv2.EVENT_LBUTTONDOWN or etat["mode"] is None or y >= h:  # clic dans la légende
             return
         pts = etat["points"]
         pts.append([round(x / w, 3), round(y / h, 3)])
@@ -152,7 +156,10 @@ def main(lieu, num, photo):
                 cv2.circle(vue, tuple(p), 5, (0, 0, 255), -1)
         cv2.rectangle(vue, (0, 0), (w, 34), (0, 0, 170) if etat["mode"] and etat["mode"][0] == "mur" else (0, 0, 0), -1)  # rouge : on attend la ligne du mur
         cv2.putText(vue, sans_accents(etat["message"])[:110], (8, 23), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
-        cv2.imshow(titre, vue)
+        bas = np.zeros((22 * len(LEGENDE) + 10, w, 3), "u1")  # sous la photo : elle n'en cache rien
+        for i, ligne in enumerate(LEGENDE):
+            cv2.putText(bas, ligne, (8, 22 * (i + 1)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+        cv2.imshow(titre, np.vstack([vue, bas]))
 
         touche = cv2.waitKey(30) & 0xFF
         if touche == 27:
@@ -182,8 +189,20 @@ def main(lieu, num, photo):
                 finir(cam["zones"].get(etat["mode"][1]))
             else:
                 finir(pts if len(pts) >= (3 if etat["mode"][0] == "zone" else 2) else None)
-        elif touche in (8, 127) and etat["points"]:
-            etat["points"].pop()
+        elif touche in (8, 127):
+            mode = etat["mode"]
+            if etat["points"]:
+                etat["points"].pop()
+            elif mode and mode[0] == "mur" and mode[1] in cam["zones"]:  # on rouvre la zone qu'on vient de fermer
+                etat["mode"], etat["points"] = ("zone", mode[1]), list(cam["zones"].pop(mode[1]))
+                dire(f"Zone {mode[1]} rouverte : Retour arriere efface ses coins un par un, Entree pour la refermer")
+            elif mode and mode[0] == "zone" and mode[1] in cam["zones"]:
+                cam["zones"].pop(mode[1]); cam["murs"].pop(mode[1], None); etat["modifie"] = True
+                dire(f"Zone {mode[1]} effacee. Clique ses coins pour la refaire, ou un autre chiffre")
+            elif mode is None and etat.get("dernier") in cam["zones"]:  # on rouvre la ligne du dernier mur fini
+                n = etat["dernier"]
+                etat["mode"], etat["points"] = ("mur", n), list(cam["murs"].pop(n, []))[:-1]
+                dire(f"Ligne du mur {n} rouverte : clique ses points, ou Entree pour s'en passer")
         elif touche in (ord("s"), ord("S")):
             chemin.parent.mkdir(exist_ok=True)
             # relire : une autre fenêtre (une autre caméra) a pu enregistrer entre-temps ; on ne remplace que la nôtre

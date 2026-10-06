@@ -322,8 +322,9 @@ def ouvrir_cameras(c):
         cam = Camera(k["nom"], c["ips"], k.get("identifiant", ""))
         cam.titre = f"camera{len(cameras) + 1}"  # comme les photos
         if not cam.ouvrir({a.identifiant for a in cameras} | (voulus - {cam.voulu}), premiere=True):
-            raise SystemExit(f"Caméra {cam.titre} '{k['nom']}' {k.get('identifiant', '')} introuvable parmi les caméras "
-                             "branchées. Avec un identifiant : la caméra doit être sur la même prise USB qu'au tracé.")
+            # Le show tourne avec les autres caméras ; celle-ci est cherchée toutes les 2 s et rejoint dès qu'elle livre.
+            print(f"ATTENTION : caméra {cam.titre} '{k['nom']}' {k.get('identifiant', '')} introuvable, je continue sans elle "
+                  "et je la cherche. Avec un identifiant : la caméra doit être sur la même prise USB qu'au tracé.")
         cameras.append(cam)
     return cameras
 
