@@ -140,6 +140,7 @@ pas_seuil = 0.15           # atelier Accueil : part d'une bande qui doit différ
 pas_vide_s = 1.5           # bandes vides depuis ce temps : prêt pour la personne suivante
 fond_delai_s = 10          # temps laissé pour sortir du champ avant la photo du fond (au lancement et après la touche F)
 fond_s = 120               # le fond suit lentement l'image (lumière qui dérive). 0 = fond fixe. Touche F : le reprendre
+pieds = [1]                # zones comptées par les pieds : le mur d'en face des caméras (sinon quelqu'un au milieu de la salle le cache et le déclenche). Ajouter 2, 4 si même souci
 tranches = 8               # une zone dont le mur est tracé est découpée en 8 tranches le long du mur : la matière ne s'agite que là où sont les gens
 
 # Les caméras et leurs zones sont dans un fichier par lieu, tracé à la souris sur une photo (outils/tracer.py) :

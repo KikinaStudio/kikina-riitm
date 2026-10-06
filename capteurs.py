@@ -76,6 +76,28 @@ def mesurer(gris, avant, fond, rect, c):
     return min(1.0, la / c["presence_pleine"]), min(1.0, bouge / c["energie_pleine"]), la, bouge
 
 
+def par_les_pieds(gris, avant, fond, rect, seuil):
+    """Mur en face de la caméra : quelqu'un au milieu de la salle cache, avec sa tête, le sol au pied de ce mur
+    dans l'image, sans en être proche. On ne garde que les silhouettes dont les pieds (le bas) sont dans la zone.
+    Renvoie (gris, avant) où tout le reste est remplacé par le fond : les mesures habituelles n'y voient plus rien."""
+    h, w = gris.shape
+    fg = cv2.morphologyEx((np.abs(gris - fond) > seuil).astype("u1"), cv2.MORPH_CLOSE, np.ones((9, 5), "u1"))  # recolle jambes et buste
+    n, lab, stats, _ = cv2.connectedComponentsWithStats(fg)
+    dedans = np.zeros((h, w), bool)
+    dedans[decoupe(dedans, rect)] = True
+    garder = np.zeros(n, bool)
+    for i in range(1, n):
+        x, y, bw, bh, aire = stats[i]
+        if aire < 40:  # grain, reflet
+            continue
+        bas = slice(max(y, y + bh - 3), y + bh)  # les 3 lignes du bas de la silhouette : ses pieds
+        pieds = lab[bas] == i
+        garder[i] = dedans[bas][pieds].mean() > 0.5
+    garde = cv2.dilate(garder[lab].astype("u1"), np.ones((7, 7), "u1")).astype(bool)  # un peu autour : le mouvement déborde
+    g = np.where(garde, gris, fond)
+    return g, np.where(garde, avant, g)
+
+
 @functools.lru_cache(maxsize=32)
 def etiquettes(h, w, zone, murs, n):
     """Numéro de tranche (0 à n-1) de chaque point de la zone, -1 hors zone. Calculé une fois par réglage.
@@ -473,13 +495,15 @@ def main():
                     if pas:
                         envoyer("/accueil/pas", pas)
                         print(f"Pas {pas}")
+                pieds = {str(z) for z in c.get("pieds", [])}
                 for n, rect in k["zones"].items():
-                    mesures[n] = mesurer(gris, cam.avant, fond, rect, c)
+                    g, a = par_les_pieds(gris, cam.avant, fond, rect, c["seuil"]) if n in pieds else (gris, cam.avant)
+                    mesures[n] = mesurer(g, a, fond, rect, c)
                     cam.envoi[n] = mesures[n][:2]
                     if n in k.get("murs", {}):  # on sait où est le mur : mesure tranche par tranche
                         lab = etiquettes(*gris.shape, json.dumps(rect), json.dumps(k["murs"][n]), c["tranches"])
-                        t = (par_tranche(gris, fond, lab, c["tranches"], c["seuil"], c["presence_pleine"]),
-                             par_tranche(gris, cam.avant, lab, c["tranches"], c["seuil"], c["energie_pleine"]))
+                        t = (par_tranche(g, fond, lab, c["tranches"], c["seuil"], c["presence_pleine"]),
+                             par_tranche(g, a, lab, c["tranches"], c["seuil"], c["energie_pleine"]))
                         cam.tranches[n] = t[1]
                         cam.envoi_tranches[n] = t
                 if c["fond_s"] > 0:  # le fond suit lentement l'image : une lumière qui dérive ne compte pas comme quelqu'un
@@ -568,6 +592,16 @@ def autotest():
     p, e, *_ = mesurer(bouge, immobile, fond, gauche, c)
     assert p > 0.3 and e > 0.3, f"en mouvement : présence et mouvement, reçu {p:.2f} {e:.2f}"
     assert mesurer(bouge, immobile, fond, droite, c)[:2] == (0, 0), "la zone voisine ne doit rien voir"
+    # Mur d'en face : une tête qui cache le fond ne compte pas, seuls les pieds dans la zone comptent.
+    def debout(haut, bas):  # silhouette de 60 px de large entre ces lignes (image de 480 px de haut)
+        image = np.full((480, 640, 3), 40, "f4") + hasard.normal(0, 4, (480, 640, 1))
+        image[haut:bas, 300:360] += 120
+        return preparer(image.clip(0, 255).astype("u1"))
+    loin = [0, 0, 1, 0.4]
+    milieu, au_mur = debout(100, 330), debout(40, 170)  # pieds à 0,69 (milieu de la salle) ou à 0,35 (au pied du mur)
+    assert mesurer(milieu, milieu, fond, loin, c)[0] > 0.3, "sans les pieds, la tête suffit : c'est le défaut corrigé"
+    assert mesurer(*par_les_pieds(milieu, milieu, fond, loin, c["seuil"]), fond, loin, c)[0] == 0, "au milieu : rien sur le mur d'en face"
+    assert mesurer(*par_les_pieds(au_mur, au_mur, fond, loin, c["seuil"]), fond, loin, c)[0] > 0.3, "au pied du mur : présence"
     lire_config()  # le bloc [capteurs] de config.toml et les caméras de la salle existent et se lisent
 
     # Les tranches : une silhouette au bout gauche du mur allume les premières tranches, pas la dernière.
