@@ -1,54 +1,43 @@
-"""Recopie le son de BlackHole vers la Mixcast (USB). Ableton sort sur BlackHole seule : il démarre toujours.
+"""Recopie le son de BlackHole vers la Mixcast (Bluetooth ou USB). Ableton sort sur BlackHole seule.
 
     python outils/vers_mixcast.py
 
-La Mixcast refuse souvent son premier démarrage : on réessaie jusqu'à ce qu'elle accepte, et on la rouvre si
-elle décroche. Le moteur (kikina.py) écoute BlackHole en même temps. À lancer depuis le Terminal du Mac
-(droit au micro). Ctrl+C pour arrêter.
+Un seul flux qui lit BlackHole et écrit dans la Mixcast. Elle refuse parfois de démarrer, ou décroche : on
+réessaie jusqu'à ce qu'elle accepte. Le moteur (kikina.py) écoute BlackHole en même temps.
+À lancer depuis le Terminal du Mac (droit au micro). Ctrl+C pour arrêter.
 """
-import collections
 import time
 
 import numpy as np
 import sounddevice as sd
 
 SR, BLOC = 48000, 256
-tampon = collections.deque(maxlen=40)  # environ 0,2 s au plus : on jette le vieux son plutôt que de prendre du retard
+niveau = [-120.0]
 
 
-def appareil(nom, sens):
-    return next(d["index"] for d in sd.query_devices() if nom in d["name"] and d[f"max_{sens}_channels"] > 0)
+def recopie(entree, sortie, *_):
+    sortie[:] = entree
+    niveau[0] = 20 * np.log10(np.sqrt(np.mean(entree ** 2)) + 1e-6)
 
 
-def entree(donnees, *_):
-    tampon.append(donnees.copy())
-
-
-def sortie(donnees, *_):
-    donnees[:] = tampon.popleft() if tampon else 0  # rien reçu : silence
-
-
-def ouvrir(fabrique, nom):
+def ouvrir():
     while True:
         try:
-            flux = fabrique()
+            sd._terminate(); sd._initialize()  # relire la liste : une Mixcast rebranchée change de numéro
+            bh = next(d["index"] for d in sd.query_devices() if "BlackHole" in d["name"] and d["max_input_channels"])
+            mx = next(d["index"] for d in sd.query_devices() if "Mixcast" in d["name"] and d["max_output_channels"])
+            flux = sd.Stream(device=(bh, mx), samplerate=SR, channels=2, blocksize=BLOC, dtype="float32", callback=recopie)
             flux.start()
-            print(f"{nom} : ouvert")
+            print(f"BlackHole -> {sd.query_devices(mx)['name']}. Ctrl+C pour arrêter.")
             return flux
         except Exception:
-            time.sleep(0.5)  # la Mixcast refuse souvent le premier essai
+            time.sleep(1)  # Mixcast absente ou qui refuse le premier essai
 
 
-ecoute = ouvrir(lambda: sd.InputStream(device=appareil("BlackHole", "input"), samplerate=SR, channels=2,
-                                        blocksize=BLOC, dtype="float32", callback=entree), "BlackHole")
-joue = ouvrir(lambda: sd.OutputStream(device=appareil("Mixcast", "output"), samplerate=SR, channels=2,
-                                       blocksize=BLOC, dtype="float32", callback=sortie), "Mixcast")
-print("BlackHole -> Mixcast. Ctrl+C pour arrêter.")
+flux = ouvrir()
 while True:
     time.sleep(1)
-    if not joue.active:  # la Mixcast a décroché : on la rouvre
-        print("Mixcast décrochée, je la rouvre")
-        joue = ouvrir(lambda: sd.OutputStream(device=appareil("Mixcast", "output"), samplerate=SR, channels=2,
-                                               blocksize=BLOC, dtype="float32", callback=sortie), "Mixcast")
-    niveau = 20 * np.log10(np.sqrt(np.mean(tampon[-1] ** 2)) + 1e-6) if tampon else -120
-    print(f"\rson recopié : {niveau:6.1f} dB", end="", flush=True)
+    if not flux.active:
+        print("\nMixcast décrochée, je la rouvre")
+        flux = ouvrir()
+    print(f"\rson recopié : {niveau[0]:6.1f} dB", end="", flush=True)

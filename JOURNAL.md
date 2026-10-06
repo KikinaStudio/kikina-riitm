@@ -4,20 +4,41 @@
 
 ---
 
-## 6 octobre 2026 (matin, jour J) - Photos des caméras pour le tracé
+## 6 octobre 2026 (matin, jour J) - Caméras, zones, son vers la salle
 
-- Caméras changées de prise USB : identifiants recopiés dans `lieux/salle.toml` (caméra 1 retournée `0x111110032e49230`, caméra 2 `0x113000032e49230`).
-- Photos pour `outils/tracer.py` : `captures/camera1_081315.jpg` (remise à l'endroit) et `captures/camera2_081935.jpg` (refaite après le refixage des caméras), en 640 x 480 et éclaircies. Vérifié : même cadrage qu'en 320 x 240 (la taille que mesure capteurs.py), les tracés restent justes.
-- Le Terminal de l'app Claude n'a pas le droit d'utiliser les caméras : les photos se prennent depuis le Terminal du Mac.
-- **Caméra 1 instable** sur sa rallonge (quelques images après chaque branchement, puis plus rien), même avec les 2 rallonges d'hier. Solution de Jérémie à 9 h 10 : les 2 caméras sans rallonge, sur le même mur, chacune vers un côté de la salle. Caméra 1 retournée, voit les murs 1, 2, 3 ; caméra 2 voit 1, 3, 4. Zones et lignes tracées par Jérémie.
+### Ce qui a été fait
+- **Caméras** : la caméra 1 décrochait sur sa rallonge (quelques images après chaque branchement, puis plus rien), même avec les 2 rallonges d'hier. Solution de Jérémie à 9 h 10 : les 2 caméras **sans rallonge, sur le même mur (mur 3), chacune vers un côté** de la salle. Caméra 1 retournée (`0x111000032e49230`), voit les murs 1, 2, 3 ; caméra 2 (`0x113000032e49230`) voit 1, 3, 4. Zones et lignes tracées par Jérémie dans `lieux/salle.toml` (photos `captures/camera*_090938.jpg`).
+- Capteurs : le mur 1 (en face des caméras) est compté **par les pieds** (`pieds = [1]` dans config.toml) : quelqu'un au milieu de la salle qui cache le fond avec sa tête ne le déclenche plus. Ajouter 2 et 4 si les petits murs ont le même souci.
 - `capteurs.py` démarre même si une caméra manque : il la cherche toutes les 2 s et l'ajoute dès qu'elle livre.
 - Nouvel outil `outils/voir_cameras.py` : les caméras en direct (vert = livre, rouge = muette), se met à jour seul au branchement, P = photos pour le tracé. À fermer avant de lancer capteurs.py (il occupe les caméras).
 - `outils/tracer.py` : légende des murs sous la photo, Retour arrière remonte étape par étape (clic, zone, ligne).
-- 9 h 27 : capteurs lancés, 2 caméras à 30 i/s, 4 zones.
-- Capteurs : le mur 1 (en face des caméras) est compté par les pieds (`pieds = [1]` dans config.toml) : une tête au milieu de la salle qui cache le fond ne le déclenche plus.
-- Son vers la salle : Tascam Mixcast 4 en USB (sur une prise USB-A du hub NDI : la prise USB-C du hub ne fait que charger). La Mixcast refuse son premier démarrage : Ableton abandonne et reste sur OFF, même via un périphérique à sorties multiples. Solution : **Ableton sort sur BlackHole 2ch**, et `outils/vers_mixcast.py` recopie BlackHole vers la Mixcast en réessayant jusqu'à ce qu'elle accepte. BlackHole passée à 48 000 Hz.
-- **Cause du « son -120 dB » depuis des jours** : le Terminal du Mac n'avait pas le droit au micro (macOS appelle micro toute entrée son, BlackHole comprise) et recevait du silence. Micro autorisé pour Terminal le 6/10 à 10 h 30. Le moteur entend la musique (-33 dB, notes détectées).
-- Ordre de lancement au show (Terminal du Mac) : `capteurs.py salle`, `kikina.py`, `outils/vers_mixcast.py`, `audio_live.py` ; Ableton sortie BlackHole 2ch.
+- **Son vers la salle : Tascam Mixcast 4 en Bluetooth.** Ableton sort sur **BlackHole 2ch** (plus sur « voila »), et `outils/vers_mixcast.py` recopie BlackHole vers la Mixcast (Bluetooth ou USB, le premier appareil dont le nom contient « Mixcast ») et la rattend si elle décroche. Le moteur écoute la même BlackHole : l'image suit la musique (-33 dB, notes détectées).
+- BlackHole passée à 48 000 Hz (le moteur l'ouvre à sa fréquence par défaut).
+- **Cause du « son -120 dB » depuis des jours** : le Terminal du Mac n'avait pas le droit au micro (macOS appelle micro toute entrée son, BlackHole comprise) et recevait du silence. Micro autorisé pour Terminal le 6/10 vers 10 h 30. Le Terminal de l'app Claude, lui, a le micro mais pas les caméras.
+
+### Pourquoi pas la Mixcast en USB
+- Sur le hub du NDI (Multiport Pro), le Mac ne la voit pas (sa prise USB-C ne fait que charger ; les prises USB-A essayées non plus).
+- Sur le hub des caméras, le Mac la voit mais elle ne joue pas : les caméras prennent le débit de ce hub, la Mixcast refuse de démarrer (Ableton reste sur OFF, un bip de test reste bloqué).
+- Seule piste USB restante : directement sur une prise du Mac (libérer celle du chargeur, charger en MagSafe).
+
+### Ce qui reste fragile
+- **Bluetooth** : à la connexion, macOS prend la Mixcast comme micro, elle passe alors en mode téléphone et la musique se coupe ou craque. **Son > Entrée doit rester sur MacBook Pro Microphone** (à revérifier à chaque reconnexion). La connexion a déjà lâché une fois : Réglages Bluetooth > TASCAM Mixcast > Se connecter (fonction BT active sur la Mixcast).
+- Environ 0,2 s de retard du son en Bluetooth.
+- Le fond des capteurs se reprend à chaque lancement : salle vide, puis F.
+- Le périphérique à sorties multiples « voila » existe encore mais ne sert plus.
+
+### Comment relancer (Terminal du Mac, pas celui de l'app Claude : il n'a pas les caméras)
+```bash
+cd "/Users/leon/RIITM final"
+.venv/bin/python capteurs.py salle        # puis salle vide, touche F
+.venv/bin/python kikina.py                # NDI KIKINA, touches 1 à 4 use cases, 0 effacer
+.venv/bin/python outils/vers_mixcast.py   # BlackHole -> Mixcast
+.venv/bin/python audio_live.py            # caméras -> Ableton
+```
+Ableton : Settings > Audio > sortie **BlackHole 2ch**, moteur audio allumé (pas OFF à droite de MIDI). Volume de la salle : sur la Mixcast, jamais le Master d'Ableton (le moteur mesure ce niveau).
+
+### État à 10 h 50
+Capteurs, moteur (NDI 30 i/s, 2 récepteurs à la régie), relais (-31 dB vers TASCAM Mixcast Bluetooth) et pont Ableton tournent.
 
 ---
 
