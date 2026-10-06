@@ -14,6 +14,10 @@
 - Nouvel outil `outils/voir_cameras.py` : les caméras en direct (vert = livre, rouge = muette), se met à jour seul au branchement, P = photos pour le tracé. À fermer avant de lancer capteurs.py (il occupe les caméras).
 - `outils/tracer.py` : légende des murs sous la photo, Retour arrière remonte étape par étape (clic, zone, ligne).
 - 9 h 27 : capteurs lancés, 2 caméras à 30 i/s, 4 zones.
+- Capteurs : le mur 1 (en face des caméras) est compté par les pieds (`pieds = [1]` dans config.toml) : une tête au milieu de la salle qui cache le fond ne le déclenche plus.
+- Son vers la salle : Tascam Mixcast 4 en USB (sur une prise USB-A du hub NDI : la prise USB-C du hub ne fait que charger). La Mixcast refuse son premier démarrage : Ableton abandonne et reste sur OFF, même via un périphérique à sorties multiples. Solution : **Ableton sort sur BlackHole 2ch**, et `outils/vers_mixcast.py` recopie BlackHole vers la Mixcast en réessayant jusqu'à ce qu'elle accepte. BlackHole passée à 48 000 Hz.
+- **Cause du « son -120 dB » depuis des jours** : le Terminal du Mac n'avait pas le droit au micro (macOS appelle micro toute entrée son, BlackHole comprise) et recevait du silence. Micro autorisé pour Terminal le 6/10 à 10 h 30. Le moteur entend la musique (-33 dB, notes détectées).
+- Ordre de lancement au show (Terminal du Mac) : `capteurs.py salle`, `kikina.py`, `outils/vers_mixcast.py`, `audio_live.py` ; Ableton sortie BlackHole 2ch.
 
 ---
 
